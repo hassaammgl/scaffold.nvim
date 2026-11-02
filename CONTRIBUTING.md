@@ -1,6 +1,6 @@
-# Contributing to Forge.nvim
+# Contributing to Scaffold.nvim
 
-Thanks for helping improve Forge. This project intentionally stays small:
+Thanks for helping improve Scaffold. This project intentionally stays small:
 native Neovim APIs, no required plugins, no daemon, and no surprising side
 effects.
 
@@ -15,15 +15,15 @@ effects.
 Clone the repository and add it to `runtimepath`:
 
 ```lua
-vim.opt.rtp:prepend("/path/to/forge.nvim")
-require("forge").setup()
+vim.opt.rtp:prepend("/path/to/scaffold.nvim")
+require("scaffold").setup()
 ```
 
 Run a command from a clean interactive Neovim:
 
 ```vim
-:Forge
-:ForgeDoctor
+:Scaffold
+:ScaffoldDoctor
 ```
 
 ## Running the tests
@@ -37,8 +37,8 @@ nvim --headless --clean -u NONE -l tests/run.lua
 Filter by test name substring:
 
 ```sh
-FORGE_TEST_FILTER=registry nvim --headless --clean -u NONE -l tests/run.lua
-FORGE_TEST_FILTER="template" nvim --headless --clean -u NONE -l tests/run.lua
+SCAFFOLD_TEST_FILTER=registry nvim --headless --clean -u NONE -l tests/run.lua
+SCAFFOLD_TEST_FILTER="template" nvim --headless --clean -u NONE -l tests/run.lua
 ```
 
 Do not report a change as tested unless `nvim ... -l tests/run.lua` actually
@@ -68,26 +68,26 @@ nvim --headless --clean -u NONE -l tests/ui_smoke.lua
 ```
 
 This is a wiring test, not a replacement for the safety specs. It must finish
-with `Forge.nvim UI smoke test passed`.
+with `Scaffold.nvim UI smoke test passed`.
 
 ## Layout
 
 ```
-plugin/forge.lua              startup: register commands only
-lua/forge/init.lua            public API and setup
-lua/forge/config.lua          option defaults and merging
-lua/forge/constants.lua       schema version, limits, patterns
-lua/forge/utils.lua           notifications, formatting, small helpers
-lua/forge/core/               registry, project, detection, fs, process, ...
-lua/forge/ui/                 dashboard, wizard, pickers, floating windows
-lua/forge/languages/          language definitions and extension registry
-lua/forge/runtimes/           tool detection, versions, install plans
-lua/forge/toolchains/         per-language tool profiles
-lua/forge/templates/          renderer, template registry, built-in templates
-lua/forge/managers/           build/test/run/clean/dependencies/environment
-lua/forge/health/             :checkhealth provider
+plugin/scaffold.lua              startup: register commands only
+lua/scaffold/init.lua            public API and setup
+lua/scaffold/config.lua          option defaults and merging
+lua/scaffold/constants.lua       schema version, limits, patterns
+lua/scaffold/utils.lua           notifications, formatting, small helpers
+lua/scaffold/core/               registry, project, detection, fs, process, ...
+lua/scaffold/ui/                 dashboard, wizard, pickers, floating windows
+lua/scaffold/languages/          language definitions and extension registry
+lua/scaffold/runtimes/           tool detection, versions, install plans
+lua/scaffold/toolchains/         per-language tool profiles
+lua/scaffold/templates/          renderer, template registry, built-in templates
+lua/scaffold/managers/           build/test/run/clean/dependencies/environment
+lua/scaffold/health/             :checkhealth provider
 tests/                        headless specs and integration smoke test
-doc/forge.txt                 Vim help
+doc/scaffold.txt                 Vim help
 ```
 
 Design rules:
@@ -103,20 +103,20 @@ Design rules:
 
 ## Adding a language
 
-1. Create `lua/forge/languages/<id>.lua` and call
-   `require("forge.languages.registry").register("<id>", definition)`.
-2. Add the module to `BUILTINS` in `lua/forge/languages/init.lua`.
+1. Create `lua/scaffold/languages/<id>.lua` and call
+   `require("scaffold.languages.registry").register("<id>", definition)`.
+2. Add the module to `BUILTINS` in `lua/scaffold/languages/init.lua`.
 3. Include `name`, `extensions`, `runtimes`, `build_systems`,
    `package_managers`, `templates`, and `markers` as appropriate.
-4. Add templates under `lua/forge/templates/<id>/init.lua` and include the
-   module in `BUILTIN_MODULES` in `lua/forge/templates/registry.lua`.
-5. Add tool definitions to `lua/forge/runtimes/detector.lua` if new executables
+4. Add templates under `lua/scaffold/templates/<id>/init.lua` and include the
+   module in `BUILTIN_MODULES` in `lua/scaffold/templates/registry.lua`.
+5. Add tool definitions to `lua/scaffold/runtimes/detector.lua` if new executables
    are involved. Add package mappings to `runtimes/installer.lua` only for
    pacman/apt packages you can verify.
 6. Add a spec covering detection, creation, and command resolution.
 
 Users can also register languages and templates at runtime through
-`require("forge").register_language` and `register_template`; no core changes
+`require("scaffold").register_language` and `register_template`; no core changes
 are needed for custom extensions.
 
 ## Adding a template
@@ -137,7 +137,7 @@ unresolved variables, and command resolution.
 - Prefer early returns for validation errors.
 - Errors are `nil, message` for normal failure paths. Throw only for
   programmer errors.
-- Use `vim.notify` through `lua/forge/utils.lua` so notifications respect the
+- Use `vim.notify` through `lua/scaffold/utils.lua` so notifications respect the
   plugin's message conventions.
 - Keep user-facing messages specific and actionable.
 - Do not add a dependency for something Neovim already provides.
@@ -146,7 +146,7 @@ unresolved variables, and command resolution.
 
 - [ ] New behavior has a test in `tests/`.
 - [ ] `nvim --headless --clean -u NONE -l tests/run.lua` passes.
-- [ ] Docs updated: `README.md`, `doc/forge.txt`, and `CHANGELOG.md` when
+- [ ] Docs updated: `README.md`, `doc/scaffold.txt`, and `CHANGELOG.md` when
       relevant.
 - [ ] No new required third-party plugin, daemon, watcher, or automatic
       installation.
@@ -159,10 +159,10 @@ verified it.
 
 ## Releases
 
-1. Update `CHANGELOG.md` and the version in `lua/forge/init.lua`.
+1. Update `CHANGELOG.md` and the version in `lua/scaffold/init.lua`.
 2. Run the full test suite and, where toolchains are available, the integration
    smoke test.
-3. Check `:checkhealth forge` in a clean configuration.
+3. Check `:checkhealth scaffold` in a clean configuration.
 4. Tag the release and summarize security-relevant changes.
 
 ## License

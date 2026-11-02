@@ -6,23 +6,23 @@
 --
 --   nvim --headless --clean -u NONE -l tests/integration.lua
 --
--- Set FORGE_KEEP_INTEGRATION=1 to keep the temporary project directory.
+-- Set SCAFFOLD_KEEP_INTEGRATION=1 to keep the temporary project directory.
 
 vim.opt.runtimepath:prepend(vim.fn.getcwd())
 
 local root = vim.fn.tempname()
 local projects = root .. "/projects"
-require("forge.core.filesystem").mkdirp(projects)
+require("scaffold.core.filesystem").mkdirp(projects)
 
-local forge = require("forge")
-forge.setup({
+local scaffold = require("scaffold")
+scaffold.setup({
   projects_dir = projects,
   registry_path = root .. "/registry.json",
   open_after_create = false,
   notify_on_exit = false,
 })
 
-local build = require("forge.managers.build")
+local build = require("scaffold.managers.build")
 local checks = {}
 
 local function run(argv, cwd, label)
@@ -44,7 +44,7 @@ local function make(name, language, template, options, extra)
     options = options or {},
     git = false,
   }, extra or {})
-  local record, meta = forge.create_project(opts)
+  local record, meta = scaffold.create_project(opts)
   if not record then
     error(("%s: %s"):format(name, tostring(meta)))
   end
@@ -82,13 +82,13 @@ local bun = make("real-bun", "bun", "bun-ts", {})
 spec = assert(build.resolve(bun, "test"))
 run(spec.argv, spec.cwd, "bun test")
 
-print("Forge.nvim integration smoke test")
+print("Scaffold.nvim integration smoke test")
 print(("%d checks passed"):format(#checks))
 for _, line in ipairs(checks) do
   print("  " .. line)
 end
 print("projects: " .. projects)
 
-if vim.env.FORGE_KEEP_INTEGRATION ~= "1" then
+if vim.env.SCAFFOLD_KEEP_INTEGRATION ~= "1" then
   vim.fn.delete(root, "rf")
 end

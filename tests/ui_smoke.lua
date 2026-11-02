@@ -13,22 +13,22 @@ vim.opt.runtimepath:prepend(vim.fn.getcwd())
 
 local root = vim.fn.tempname()
 local projects = root .. "/projects"
-require("forge.core.filesystem").mkdirp(projects)
+require("scaffold.core.filesystem").mkdirp(projects)
 
-local forge = require("forge")
-forge.setup({
+local scaffold = require("scaffold")
+scaffold.setup({
   projects_dir = projects,
   registry_path = root .. "/registry.json",
   open_after_create = false,
   notify_on_exit = false,
 })
 
-local window = require("forge.ui.window")
+local window = require("scaffold.ui.window")
 window.ui_available = function()
   return true
 end
 
-local select = require("forge.ui.select")
+local select = require("scaffold.ui.select")
 select.choose = function(_, choices)
   return choices[1]
 end
@@ -64,17 +64,17 @@ local function close_last()
 end
 
 -- Dashboard.
-local dashboard = require("forge.ui.dashboard")
+local dashboard = require("scaffold.ui.dashboard")
 local dbuf, dwin = dashboard.open()
 assert(dbuf and dwin, "dashboard did not open")
 local dashboard_text = buffer_text(dbuf)
-assert(dashboard_text:find("Forge.nvim", 1, true), "dashboard title missing")
+assert(dashboard_text:find("Scaffold.nvim", 1, true), "dashboard title missing")
 assert(dashboard_text:find("New project", 1, true), "dashboard create item missing")
 assert(dashboard_text:find("Doctor", 1, true), "dashboard doctor item missing")
 close_last()
 
 -- Screens.
-local screens = require("forge.ui.screens")
+local screens = require("scaffold.ui.screens")
 assert(screens.runtimes({}), "runtime screen did not open")
 close_last()
 
@@ -91,7 +91,7 @@ close_last()
 
 -- Wizard: choose the first language/template and the first option defaults,
 -- then activate the preview's <CR> mapping.
-local wizard = require("forge.ui.wizard")
+local wizard = require("scaffold.ui.wizard")
 local wbuf = assert(wizard.create(), "wizard did not open")
 local text = buffer_text(wbuf)
 assert(text:find("Preview", 1, true), "wizard preview missing")
@@ -106,9 +106,9 @@ end
 assert(enter, "wizard preview has no <CR> callback")
 enter()
 
-local record = require("forge.core.registry").find_by_path(projects .. "/ui-wizard")
+local record = require("scaffold.core.registry").find_by_path(projects .. "/ui-wizard")
 assert(record, "wizard did not register the project")
-assert(#require("forge.core.filesystem").list_details(record.path) > 0, "wizard did not write template files")
+assert(#require("scaffold.core.filesystem").list_details(record.path) > 0, "wizard did not write template files")
 
 -- Project and dependency screens.
 assert(screens.project_info(record), "project info screen did not open")
@@ -120,6 +120,6 @@ close_last()
 -- Installing an already-present tool is a safe no-op.
 screens.install("git")
 
-print("Forge.nvim UI smoke test passed")
+print("Scaffold.nvim UI smoke test passed")
 print("created: " .. record.path)
 vim.fn.delete(root, "rf")

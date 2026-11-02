@@ -1,11 +1,11 @@
 -- Build command resolution and process execution tests.
 
 local H = require("tests.harness")
-local fs = require("forge.core.filesystem")
-local registry = require("forge.core.registry")
-local project = require("forge.core.project")
-local build = require("forge.managers.build")
-local process = require("forge.core.process")
+local fs = require("scaffold.core.filesystem")
+local registry = require("scaffold.core.registry")
+local project = require("scaffold.core.project")
+local build = require("scaffold.managers.build")
+local process = require("scaffold.core.process")
 
 local function create_cpp(projects, name)
   return H.ok(project.create({
@@ -39,11 +39,11 @@ H.test("new CMake projects configure before building", function()
   H.rmrf(base)
 end)
 
-H.test(".forge.json commands require confirmation and support cwd", function()
+H.test(".scaffold.json commands require confirmation and support cwd", function()
   local base, projects = H.fresh()
   local record = create_cpp(projects, "configured")
   H.mkdir(record.path .. "/sub")
-  H.write(record.path .. "/.forge.json", vim.json.encode({
+  H.write(record.path .. "/.scaffold.json", vim.json.encode({
     commands = {
       build = { argv = { "make", "-C", "sub" }, cwd = "sub" },
     },
@@ -53,7 +53,7 @@ H.test(".forge.json commands require confirmation and support cwd", function()
   H.eq(spec.argv, { "make", "-C", "sub" })
   H.eq(spec.cwd, record.path .. "/sub")
   H.eq(spec.confirm, true)
-  H.match(tostring(spec.source), ".forge.json")
+  H.match(tostring(spec.source), ".scaffold.json")
   H.rmrf(base)
 end)
 
@@ -157,7 +157,7 @@ H.test("process failures report exit codes and capture stderr", function()
   H.match(result.stdout, "out")
   H.match(result.stderr, "err")
 
-  local missing = process.run_sync({ "forge-definitely-not-a-real-tool" }, { timeout = 5000 })
+  local missing = process.run_sync({ "scaffold-definitely-not-a-real-tool" }, { timeout = 5000 })
   H.falsy(missing)
 end)
 

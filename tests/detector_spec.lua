@@ -1,7 +1,7 @@
 -- Project detection tests.
 
 local H = require("tests.harness")
-local detector = require("forge.core.detector")
+local detector = require("scaffold.core.detector")
 
 local function has_candidate(result, language, build_system)
   for _, candidate in ipairs(result.candidates or {}) do
@@ -22,7 +22,7 @@ H.test("CMake + C source is detected as C", function()
   H.eq(result.language, "c")
   H.eq(result.build_system, "cmake")
   H.ok(result.confidence >= 0.9)
-  H.eq(result.root, require("forge.core.filesystem").normalize(base))
+  H.eq(result.root, require("scaffold.core.filesystem").normalize(base))
   H.rmrf(base)
 end)
 
@@ -92,7 +92,7 @@ H.test("monorepos report multiple candidates and the git root", function()
   H.write(root .. "/native/main.cpp", "int main(){return 0;}\n")
 
   local result = H.ok(detector.detect(root .. "/native"))
-  H.eq(result.vcs_root, require("forge.core.filesystem").normalize(root))
+  H.eq(result.vcs_root, require("scaffold.core.filesystem").normalize(root))
   H.ok(has_candidate(result, "cpp", "cmake"))
   H.ok(has_candidate(result, "javascript", "npm"))
   H.rmrf(root)
@@ -109,7 +109,7 @@ H.test("empty directories produce no candidates", function()
 end)
 
 H.test("detect rejects missing paths", function()
-  local result, err = detector.detect("/definitely/not/a/real/path/forge-test")
+  local result, err = detector.detect("/definitely/not/a/real/path/scaffold-test")
   H.falsy(result)
   H.ok(err ~= nil)
 end)

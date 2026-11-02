@@ -3,7 +3,7 @@
 local H = {}
 
 H.tests = {}
-H.filter = os.getenv("FORGE_TEST_FILTER")
+H.filter = os.getenv("SCAFFOLD_TEST_FILTER")
 
 function H.test(name, fn)
   H.tests[#H.tests + 1] = { name = name, fn = fn }
@@ -42,7 +42,7 @@ function H.match(value, pattern, message)
 end
 
 function H.mkdir(path)
-  local fs = require("forge.core.filesystem")
+  local fs = require("scaffold.core.filesystem")
   local ok, err = fs.mkdirp(path)
   if not ok then
     error("could not create " .. tostring(path) .. ": " .. tostring(err), 2)
@@ -50,7 +50,7 @@ function H.mkdir(path)
 end
 
 function H.write(path, content)
-  local fs = require("forge.core.filesystem")
+  local fs = require("scaffold.core.filesystem")
   local ok, err = fs.write(path, content, { overwrite = true })
   if not ok then
     error("could not write " .. tostring(path) .. ": " .. tostring(err), 2)
@@ -58,7 +58,7 @@ function H.write(path, content)
 end
 
 function H.read(path)
-  local fs = require("forge.core.filesystem")
+  local fs = require("scaffold.core.filesystem")
   local data, err = fs.read(path)
   if not data then
     error("could not read " .. tostring(path) .. ": " .. tostring(err), 2)
@@ -78,16 +78,16 @@ function H.fresh()
   H.mkdir(base)
   local projects = base .. "/projects"
   H.mkdir(projects)
-  local forge = require("forge")
-  forge.setup({
+  local scaffold = require("scaffold")
+  scaffold.setup({
     projects_dir = projects,
     registry_path = base .. "/registry.json",
     runtime_cache_ttl = 300,
     open_after_create = false,
     notify_on_exit = false,
   })
-  require("forge.core.registry")._reset()
-  require("forge.core.project")._reset_approvals()
+  require("scaffold.core.registry")._reset()
+  require("scaffold.core.project")._reset_approvals()
   return base, projects
 end
 
@@ -100,7 +100,7 @@ end
 
 function H.run()
   local passed, failed = 0, 0
-  print("Forge.nvim test suite")
+  print("Scaffold.nvim test suite")
   print(string.rep("-", 60))
   for _, case in ipairs(H.tests) do
     if not H.filter or case.name:find(H.filter, 1, true) then

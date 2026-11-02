@@ -1,9 +1,9 @@
 -- Project creation, opening, and project configuration tests.
 
 local H = require("tests.harness")
-local fs = require("forge.core.filesystem")
-local registry = require("forge.core.registry")
-local project = require("forge.core.project")
+local fs = require("scaffold.core.filesystem")
+local registry = require("scaffold.core.registry")
+local project = require("scaffold.core.project")
 
 local function create(projects, overrides)
   local opts = {
@@ -17,7 +17,7 @@ local function create(projects, overrides)
   for key, value in pairs(overrides or {}) do
     opts[key] = value
   end
-  return require("forge").create_project(opts)
+  return require("scaffold").create_project(opts)
 end
 
 H.test("create writes template files and registers metadata", function()
@@ -37,9 +37,15 @@ H.test("create writes template files and registers metadata", function()
   H.match(H.read(record.path .. "/src/main.cpp"), "Hello from cpp-app")
   H.match(H.read(record.path .. "/README.md"), "cpp-app")
 
+  -- editor/toolchain hints: clangd gets the standard before the first build
+  H.ok(fs.is_file(record.path .. "/compile_flags.txt"))
+  H.ok(fs.is_file(record.path .. "/.clangd"))
+  H.match(H.read(record.path .. "/compile_flags.txt"), "-std=c++20")
+  H.match(H.read(record.path .. "/.clangd"), "-xc++-header")
+
   H.eq(record.commands.build, { "cmake", "--build", "build" })
   H.eq(record.commands.run, { "./build/cpp-app" })
-  H.eq(#meta.created, 4)
+  H.eq(#meta.created, 6)
   H.eq(#meta.install_commands, 0)
   H.eq(registry.get(record.id).path, record.path)
   H.rmrf(base)
@@ -168,10 +174,10 @@ H.test("java-maven template renders the selected release", function()
   H.rmrf(base)
 end)
 
-H.test("declarative .forge.json configuration is read automatically", function()
+H.test("declarative .scaffold.json configuration is read automatically", function()
   local base, projects = H.fresh()
   local record = H.ok(create(projects, { name = "configured" }))
-  H.write(record.path .. "/.forge.json", vim.json.encode({
+  H.write(record.path .. "/.scaffold.json", vim.json.encode({
     commands = {
       build = { "echo", "json-build" },
       test = { argv = { "echo", "json-test" }, cwd = "src" },
@@ -182,14 +188,14 @@ H.test("declarative .forge.json configuration is read automatically", function()
   H.ok(config, meta)
   H.eq(config.commands.build, { "echo", "json-build" })
   H.eq(meta.executable, false)
-  H.match(meta.source, ".forge.json")
+  H.match(meta.source, ".scaffold.json")
   H.rmrf(base)
 end)
 
-H.test(".forge.lua requires explicit approval and runs sandboxed", function()
+H.test(".scaffold.lua requires explicit approval and runs sandboxed", function()
   local base = vim.fn.tempname()
   H.mkdir(base)
-  H.write(base .. "/.forge.lua", [[
+  H.write(base .. "/.scaffold.lua", [[
 return {
   commands = {
     test = { "echo", "lua-test" },
@@ -208,7 +214,7 @@ return {
 
   local sandbox_dir = vim.fn.tempname()
   H.mkdir(sandbox_dir)
-  H.write(sandbox_dir .. "/.forge.lua", "return { value = os.time() }")
+  H.write(sandbox_dir .. "/.scaffold.lua", "return { value = os.time() }")
   local sandboxed, sandbox_err = project.config(sandbox_dir, { approved = true })
   H.falsy(sandboxed)
   H.ok(sandbox_err ~= nil)
@@ -250,7 +256,7 @@ H.test("create parent directory when requested", function()
   local base = vim.fn.tempname()
   H.mkdir(base)
   local projects = base .. "/does/not/exist/yet"
-  require("forge").setup({
+  require("scaffold").setup({
     projects_dir = projects,
     registry_path = base .. "/registry.json",
     notify_on_exit = false,

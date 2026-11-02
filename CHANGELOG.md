@@ -1,8 +1,30 @@
 # Changelog
 
-All notable changes to Forge.nvim are documented here. The format follows
+All notable changes to Scaffold.nvim are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+
+- C/C++ projects now ship editor hints so the language and the standard are
+  known before the first build:
+  - `compile_flags.txt`: `-std=c++17|20|23|26` (C++), `-std=c11|17|23` (C),
+    plus `-Wall -Wextra` and `-Iinclude` for CMake libraries. This is clangd's
+    fallback flags database while `compile_commands.json` does not exist yet.
+  - `.clangd`: parses headers in the project's own language
+    (`-xc++-header` for C++, `-xc-header` for C) instead of clangd's C++
+    default for `.h`.
+- C++26 as a standard option in `cpp-cmake` and `cpp-make`.
+- `compile_commands.json` is ignored in the Makefile templates too.
+
+### Fixed
+
+- clangd produced bogus diagnostics on a freshly generated C/C++ project
+  (`No template named 'expected'`, `No member named 'println'`, `file not found`
+  for the project's own headers) because no compilation database or flags
+  existed before the first configure/build.
 
 ## [0.1.0] - 2026-11-03
 
@@ -10,13 +32,13 @@ Initial MVP.
 
 ### Added
 
-- Native dashboard (`:Forge`) with keyboard navigation and a `vim.ui.select`
+- Native dashboard (`:Scaffold`) with keyboard navigation and a `vim.ui.select`
   fallback for small terminals.
-- Project creation wizard (`:ForgeCreate`) with language, template, runtime,
+- Project creation wizard (`:ScaffoldCreate`) with language, template, runtime,
   package manager/build system, name, parent directory, template options,
   preview, explicit confirmation, optional `git init`, registration, and
   optional opening.
-- Project registry (`stdpath("data")/forge/projects.json`) with registration,
+- Project registry (`stdpath("data")/scaffold/projects.json`) with registration,
   duplicate prevention, unregistration (files kept), rename, metadata updates,
   recent projects, search, missing-path detection/pruning, schema versioning and
   migration, atomic writes, and corrupt-file backups.
@@ -40,18 +62,18 @@ Initial MVP.
   (explicit argv, project config, registry, template, heuristics), argv-only
   execution, explicit cwd, terminal buffers, cancellation, and first-run
   confirmation for project-provided commands.
-- Declarative `.forge.json` project configuration loaded automatically, and
-  executable `.forge.lua` with per-session approval and a restricted Lua
+- Declarative `.scaffold.json` project configuration loaded automatically, and
+  executable `.scaffold.lua` with per-session approval and a restricted Lua
   environment.
 - Project detection by markers with confidence scores, multiple candidates,
   monorepo awareness, Git-root discovery, and bounded source-extension hints.
-- `:ForgeOpen`, `:ForgeRecent`, `:ForgeDetect`, `:ForgeBuild`, `:ForgeTest`,
-  `:ForgeRun`, `:ForgeClean`, `:ForgeTools`, `:ForgeDoctor`, `:ForgeInstall`,
-  `:ForgeTemplates`, `:ForgeRemove`, and `:ForgeCancel`.
+- `:ScaffoldOpen`, `:ScaffoldRecent`, `:ScaffoldDetect`, `:ScaffoldBuild`, `:ScaffoldTest`,
+  `:ScaffoldRun`, `:ScaffoldClean`, `:ScaffoldTools`, `:ScaffoldDoctor`, `:ScaffoldInstall`,
+  `:ScaffoldTemplates`, `:ScaffoldRemove`, and `:ScaffoldCancel`.
 - Native screens for runtimes, toolchains, templates, projects, settings,
   dependencies, jobs, project details, detection, installation, and doctor.
 - Runtime and toolchain inspection that never starts language servers.
-- `:checkhealth forge` reporting version, registry health, schema, missing
+- `:checkhealth scaffold` reporting version, registry health, schema, missing
   paths, projects directory, template/language counts, package manager, and
   common tool availability.
 - Public Lua API for projects, registry operations, detection, command
@@ -84,6 +106,6 @@ Initial MVP.
 - Path traversal and absolute template paths are rejected.
 - Creation never overwrites existing files.
 - Unregistering never deletes project files.
-- `.forge.lua` is never loaded silently.
+- `.scaffold.lua` is never loaded silently.
 - No automatic installation, sudo, AUR helpers, language-server startup,
   daemon, watcher, or periodic polling.

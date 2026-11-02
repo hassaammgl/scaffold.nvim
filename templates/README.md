@@ -1,12 +1,12 @@
 # External templates
 
-This directory is a placeholder for external, trusted template modules. Forge
+This directory is a placeholder for external, trusted template modules. Scaffold
 does not load anything from here automatically. Point the plugin at your own
 directory:
 
 ```lua
-require("forge").setup({
-  templates_dir = "~/Projects/forge-templates",
+require("scaffold").setup({
+  templates_dir = "~/Projects/scaffold-templates",
 })
 ```
 
@@ -14,7 +14,7 @@ Each `.lua` file in that directory must return either one template table or a
 table with a `templates` array:
 
 ```lua
--- ~/Projects/forge-templates/rust.lua
+-- ~/Projects/scaffold-templates/rust.lua
 return {
   templates = {
     {
@@ -48,7 +48,7 @@ return {
 The language must be registered before the template can be loaded:
 
 ```lua
-require("forge").register_language("rust", {
+require("scaffold").register_language("rust", {
   name = "Rust",
   extensions = { "rs" },
   runtimes = { "rustc", "cargo" },

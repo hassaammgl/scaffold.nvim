@@ -4,4 +4,4 @@
 doc/tags
 tests/tmp/
 tests/.tmp/
-.forge-test/
+.scaffold-test/

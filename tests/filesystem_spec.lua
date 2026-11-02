@@ -1,7 +1,7 @@
 -- Filesystem helper tests.
 
 local H = require("tests.harness")
-local fs = require("forge.core.filesystem")
+local fs = require("scaffold.core.filesystem")
 
 H.test("write refuses to overwrite by default", function()
   local base = vim.fn.tempname()

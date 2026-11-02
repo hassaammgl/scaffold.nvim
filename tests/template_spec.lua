@@ -1,9 +1,9 @@
 -- Template engine tests.
 
 local H = require("tests.harness")
-local templates = require("forge.templates")
-local renderer = require("forge.templates.renderer")
-local fs = require("forge.core.filesystem")
+local templates = require("scaffold.templates")
+local renderer = require("scaffold.templates.renderer")
+local fs = require("scaffold.core.filesystem")
 
 H.test("all built-in templates pass validation", function()
   templates.load_builtins()

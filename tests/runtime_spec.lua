@@ -1,9 +1,9 @@
 -- Runtime detection tests. These do not require language toolchains.
 
 local H = require("tests.harness")
-local runtimes = require("forge.runtimes")
-local installer = require("forge.runtimes.installer")
-local version = require("forge.runtimes.version")
+local runtimes = require("scaffold.runtimes")
+local installer = require("scaffold.runtimes.installer")
+local version = require("scaffold.runtimes.version")
 
 H.test("version extraction and comparison", function()
   H.eq(version.extract("gcc (GCC) 13.2.1 20240301"), "13.2.1")
@@ -20,13 +20,13 @@ H.test("version extraction and comparison", function()
 end)
 
 H.test("missing tools are reported without errors", function()
-  local info, err = runtimes.info("forge-definitely-not-a-real-tool")
+  local info, err = runtimes.info("scaffold-definitely-not-a-real-tool")
   H.ok(info, err)
   H.eq(info.found, false)
   H.falsy(info.version)
-  H.eq(info.name, "forge-definitely-not-a-real-tool")
+  H.eq(info.name, "scaffold-definitely-not-a-real-tool")
 
-  H.falsy(runtimes.is_available("forge-definitely-not-a-real-tool"))
+  H.falsy(runtimes.is_available("scaffold-definitely-not-a-real-tool"))
 end)
 
 H.test("installed tools include a path and version", function()
@@ -66,7 +66,7 @@ H.test("availability-only checks do not poison the version cache", function()
 end)
 
 H.test("toolchain status is produced without starting language servers", function()
-  local toolchains = require("forge.toolchains")
+  local toolchains = require("scaffold.toolchains")
   toolchains.load_builtins()
   local status, err = toolchains.status("cpp", { version = false })
   H.ok(status, err)
@@ -85,11 +85,11 @@ H.test("toolchain status is produced without starting language servers", functio
 end)
 
 H.test("install plans never execute anything and require explicit confirmation later", function()
-  local plan = H.ok(installer.plan("forge-definitely-not-a-real-tool"))
+  local plan = H.ok(installer.plan("scaffold-definitely-not-a-real-tool"))
   H.eq(plan.installed, false)
   H.falsy(plan.argv)
   H.ok(plan.reason ~= nil)
-  H.falsy(installer.command_for("forge-definitely-not-a-real-tool"))
+  H.falsy(installer.command_for("scaffold-definitely-not-a-real-tool"))
 
   local git_plan = H.ok(installer.plan("git"))
   H.eq(git_plan.installed, true)
@@ -103,7 +103,7 @@ H.test("installer supports only pacman/apt and never AUR helpers", function()
     H.ok(family == "arch" or family == "debian")
   end
 
-  local plan = installer.plan("forge-definitely-not-a-real-tool")
+  local plan = installer.plan("scaffold-definitely-not-a-real-tool")
   if plan and plan.argv then
     for _, token in ipairs(plan.argv) do
       H.falsy(token:lower():find("yay", 1, true))

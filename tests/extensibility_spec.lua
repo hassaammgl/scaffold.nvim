@@ -1,17 +1,17 @@
 -- Extension API tests: custom languages, templates, external templates.
 
 local H = require("tests.harness")
-local fs = require("forge.core.filesystem")
-local templates = require("forge.templates")
-local languages = require("forge.languages")
-local project = require("forge.core.project")
-local forge = require("forge")
+local fs = require("scaffold.core.filesystem")
+local templates = require("scaffold.templates")
+local languages = require("scaffold.languages")
+local project = require("scaffold.core.project")
+local scaffold = require("scaffold")
 
 H.test("custom languages can be registered and used", function()
   local language_id = H.unique("rust")
   local template_id = H.unique("rust-binary")
 
-  local language, err = forge.register_language(language_id, {
+  local language, err = scaffold.register_language(language_id, {
     name = "Rust (test)",
     extensions = { "rs" },
     runtimes = { "rustc", "cargo" },
@@ -23,7 +23,7 @@ H.test("custom languages can be registered and used", function()
   H.ok(languages.exists(language_id))
   H.eq(languages.by_extension("main.rs").id, language_id)
 
-  local template, template_err = forge.register_template({
+  local template, template_err = scaffold.register_template({
     id = template_id,
     name = "Rust binary",
     language = language_id,
@@ -54,15 +54,15 @@ H.test("custom languages can be registered and used", function()
 end)
 
 H.test("invalid language definitions are rejected", function()
-  local bad_id, id_err = forge.register_language("Invalid Id", { name = "X" })
+  local bad_id, id_err = scaffold.register_language("Invalid Id", { name = "X" })
   H.falsy(bad_id)
   H.ok(id_err ~= nil)
 
-  local bad_def, def_err = forge.register_language(H.unique("lang"), { extensions = { "x" } })
+  local bad_def, def_err = scaffold.register_language(H.unique("lang"), { extensions = { "x" } })
   H.falsy(bad_def)
   H.match(tostring(def_err), "'name' is required")
 
-  local bad_list, list_err = forge.register_language(H.unique("lang"), {
+  local bad_list, list_err = scaffold.register_language(H.unique("lang"), {
     name = "X",
     extensions = "x",
   })
@@ -78,9 +78,9 @@ H.test("duplicate template registration is refused", function()
     language = "cpp",
     files = { ["x.txt"] = "x" },
   }
-  local first = H.ok(forge.register_template(template))
+  local first = H.ok(scaffold.register_template(template))
   H.eq(first.id, id)
-  local second, err = forge.register_template(template)
+  local second, err = scaffold.register_template(template)
   H.falsy(second)
   H.match(tostring(err), "already registered")
 end)
@@ -151,26 +151,26 @@ return {
 end)
 
 H.test("user commands are registered exactly once with descriptions", function()
-  require("forge.commands").register()
-  require("forge.commands").register()
+  require("scaffold.commands").register()
+  require("scaffold.commands").register()
 
   local commands = vim.api.nvim_get_commands({})
   local expected = {
-    "Forge",
-    "ForgeCreate",
-    "ForgeOpen",
-    "ForgeRecent",
-    "ForgeDetect",
-    "ForgeBuild",
-    "ForgeTest",
-    "ForgeRun",
-    "ForgeClean",
-    "ForgeTools",
-    "ForgeDoctor",
-    "ForgeInstall",
-    "ForgeTemplates",
-    "ForgeRemove",
-    "ForgeCancel",
+    "Scaffold",
+    "ScaffoldCreate",
+    "ScaffoldOpen",
+    "ScaffoldRecent",
+    "ScaffoldDetect",
+    "ScaffoldBuild",
+    "ScaffoldTest",
+    "ScaffoldRun",
+    "ScaffoldClean",
+    "ScaffoldTools",
+    "ScaffoldDoctor",
+    "ScaffoldInstall",
+    "ScaffoldTemplates",
+    "ScaffoldRemove",
+    "ScaffoldCancel",
   }
   for _, name in ipairs(expected) do
     H.ok(commands[name] ~= nil, "missing command :" .. name)
@@ -180,7 +180,7 @@ H.test("user commands are registered exactly once with descriptions", function()
 end)
 
 H.test("health check runs without error", function()
-  local health = require("forge.health")
+  local health = require("scaffold.health")
   local ok, err = pcall(health.check)
   H.ok(ok, err)
 end)

@@ -1,7 +1,7 @@
 -- Validation and path-safety tests.
 
 local H = require("tests.harness")
-local validator = require("forge.core.validator")
+local validator = require("scaffold.core.validator")
 
 H.test("project names accept safe values", function()
   for _, name in ipairs({ "app", "my-app", "my_app", "v1.2.3", "A1" }) do

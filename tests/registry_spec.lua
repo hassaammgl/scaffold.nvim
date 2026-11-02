@@ -1,8 +1,8 @@
 -- Project registry tests.
 
 local H = require("tests.harness")
-local fs = require("forge.core.filesystem")
-local registry = require("forge.core.registry")
+local fs = require("scaffold.core.filesystem")
+local registry = require("scaffold.core.registry")
 
 local function make_project(projects, name)
   local path = projects .. "/" .. name
