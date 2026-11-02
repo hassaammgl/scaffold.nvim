@@ -1,0 +1,439 @@
+*forge.txt*  Forge.nvim — native project and development environment manager
+==============================================================================
+                                                     *forge* *forge.nvim*
+Forge.nvim is a standalone Neovim plugin that creates projects from
+declarative templates, keeps a small metadata registry, detects languages and
+build systems, inspects installed toolchains, and runs project commands in
+native terminal buffers.
+
+It requires no other Neovim plugins, starts no daemon, and installs nothing
+without an explicit confirmation.
+
+Requires Neovim 0.11 or newer. Linux is the primary target; optional install
+plans understand pacman (Arch) and apt (Debian/Ubuntu).
+
+==============================================================================
+CONTENTS                                                     *forge-contents*
+
+  1. Installation ........................ |forge-installation|
+  2. Quick start ......................... |forge-quickstart|
+  3. Commands ............................ |forge-commands|
+  4. Configuration ....................... |forge-configuration|
+  5. Templates ........................... |forge-templates|
+  6. Project configuration ............... |forge-project-config|
+  7. Command resolution .................. |forge-command-resolution|
+  8. Extending Forge ..................... |forge-extending|
+  9. Lua API ............................. |forge-api|
+ 10. Security ............................ |forge-security|
+ 11. Health check ........................ |forge-health|
+ 12. Testing ............................. |forge-testing|
+ 13. Limitations ......................... |forge-limitations|
+
+==============================================================================
+1. INSTALLATION                                         *forge-installation*
+
+Forge is a normal Neovim runtime directory. Add it before calling setup: >lua
+  vim.opt.rtp:prepend(vim.fn.expand("~/Projects/forge.nvim"))
+  require("forge").setup({
+    projects_dir = "~/Projects",
+    confirm_before_install = true,
+  })
+<
+A plugin manager may also install the repository; Forge does not depend on the
+manager. `require("forge").setup()` is optional, but recommended.
+
+For a one-shot test: >
+  nvim --clean --cmd 'set rtp^=/path/to/forge.nvim' -c 'Forge'
+<
+==============================================================================
+2. QUICK START                                            *forge-quickstart*
+
+`:ForgeCreate` starts the native wizard: language, template/project type,
+runtime, package manager or build system, name, parent directory, template
+options, preview, confirmation, optional `git init`, registration, and optional
+opening.
+
+Nothing is written before the preview is approved. Existing files are never
+overwritten. Dependency install commands are printed, never executed.
+
+`:Forge` opens the dashboard:
+
+  Projects       Open, Recent, Search, Current
+  Create         New project, Browse templates
+  Development    Build, Run, Test, Clean, Dependencies, Running commands
+  Environment    Runtimes, Toolchains, Doctor
+  Settings       Registry and paths, Unregister project
+
+Dashboard keys: `j`/`k` move, `<CR>` select, `g?` help, `q` or `<Esc>` close.
+Other floating screens use `q` to close; some add `r` (refresh) or `i`
+(install plan).
+
+==============================================================================
+3. COMMANDS                                               *forge-commands*
+
+:Forge                                                        *:Forge*
+  Open the dashboard.
+
+:ForgeCreate                                             *:ForgeCreate*
+  Open the project creation wizard.
+
+:ForgeOpen [{project-or-directory}]                         *:ForgeOpen*
+  Open a registered project or directory: change Neovim's cwd and update
+  `last_opened`. Without an argument, pick from the registry.
+
+:ForgeRecent                                             *:ForgeRecent*
+  Choose from recently opened projects.
+
+:ForgeDetect [{directory}]                               *:ForgeDetect*
+  Inspect markers and confidence. Defaults to the current buffer or cwd.
+
+:ForgeBuild                                               *:ForgeBuild*
+  Build the current project in a terminal buffer.
+
+:ForgeTest                                                 *:ForgeTest*
+  Run the project's test command.
+
+:ForgeRun                                                   *:ForgeRun*
+  Run the project.
+
+:ForgeClean                                               *:ForgeClean*
+  Clean build artifacts. This command always asks for confirmation.
+
+:ForgeTools [{tool}]                                     *:ForgeTools*
+  Show runtime status for all known tools, or details/install plan for one.
+
+:ForgeDoctor                                             *:ForgeDoctor*
+  Open `:checkhealth forge`.
+
+:ForgeInstall [{tool}]                                 *:ForgeInstall*
+  Build an installation plan, show the exact command, and ask before starting
+  it. Supports pacman and apt only; never uses AUR helpers.
+
+:ForgeTemplates [{language}]                           *:ForgeTemplates*
+  Browse registered templates.
+
+:ForgeRemove [{project}]                                 *:ForgeRemove*
+  Remove a project from the registry. Project files are NOT deleted.
+
+:ForgeCancel                                             *:ForgeCancel*
+  List running Forge commands and cancel one.
+
+No global keymaps are created by default. Configure `keymaps` in setup (see
+|forge-configuration|).
+
+==============================================================================
+4. CONFIGURATION                                    *forge-configuration*
+
+All options are merged over the defaults. Calling setup more than once is safe.
+
+                                                             *forge.setup()*
+`require("forge").setup({opts})`
+
+  `projects_dir` (string)
+      Where new projects are created. Default: `~/Projects`.
+
+  `registry_path` (string)
+      Metadata file. Default: `stdpath("data")/forge/projects.json`.
+
+  `templates_dir` (string|nil)
+      Optional directory of trusted external template modules.
+
+  `confirm_before_install` (boolean)
+      Ask before package-manager installation. Default: `true`.
+
+  `confirm_before_project_commands` (boolean)
+      Ask once per session before running project-provided commands.
+      Default: `true`.
+
+  `open_after_create` (boolean)
+      Default answer to the wizard's "open after creation" prompt.
+      Default: `true`.
+
+  `allow_lua_project_config` (boolean)
+      Set `false` to refuse `.forge.lua` entirely. Default: `true`.
+
+  `runtime_cache_ttl` (number)
+      Version-check cache lifetime in seconds. `0` disables caching.
+      Default: `300`.
+
+  `terminal_split` (string)
+      Split used by command terminal buffers.
+      Default: `"botright 14split"`.
+
+  `keymaps` (table)
+      Optional maps. Keys: dashboard, create, open, recent, detect, build,
+      test, run, clean, tools, doctor, install, templates, remove, cancel.
+      Forge refuses to overwrite an existing mapping.
+
+  `notify_on_exit` (boolean)
+      Exit notification preference. Default: `true`.
+
+Example: >lua
+  require("forge").setup({
+    projects_dir = "~/Code",
+    runtime_cache_ttl = 60,
+    keymaps = { dashboard = "<leader>fp", build = "<leader>fb" },
+  })
+<
+==============================================================================
+5. TEMPLATES                                             *forge-templates*
+
+Templates are plain Lua tables. Built-in ids:
+
+  C             `c-cmake`, `c-make`
+  C++           `cpp-cmake`, `cpp-make`
+  JavaScript    `js-vanilla`, `js-express`
+  TypeScript    `ts-node`, `ts-bun`
+  Bun           `bun-ts`
+  Python        `python-cli`, `python-fastapi`
+  Java          `java-maven`, `java-gradle`, `java-plain`
+
+Template fields: `id`, `name`, `language`, optional `version`, `description`,
+`files`, `commands`, `install_commands`, `options`, `build_systems`,
+`package_managers`, `runtime_options`, `default_runtime`,
+`default_build_system`, `default_package_manager`, `requires`.
+
+`files` maps a relative path to a string or a function receiving the render
+context. A function may return `nil` to skip that file. Paths must be relative;
+absolute paths, `..`, backslashes, empty segments, and NUL bytes are rejected.
+
+String variables use `{{name}}`. Available names include `project_name`,
+`project_slug`, `project_module`, `project_path`, `selected_language`,
+`selected_runtime`, `selected_build_system`, `selected_package_manager`,
+`template_id`, `year`, `date`, `author`, every option name, and every option
+prefixed with `selected_`.
+
+Options: >lua
+  options = {
+    standard = { type = "select", label = "C++ standard",
+                 values = { "17", "20", "23" }, default = "23" },
+    tests = { type = "confirm", default = true },
+    author = { type = "input", default = "" },
+  }
+<
+`commands` values may be argv arrays, `{ argv = {...}, cwd = "..." }` tables,
+or functions returning one of those. Templates are rendered and validated
+before any file is written. Existing files are skipped by default.
+
+`load_external(directory)` loads `.lua` files returning a template or
+`{ templates = { ... } }` in a restricted environment. External files are
+trusted local code, not a hard sandbox. See `templates/README.md`.
+
+==============================================================================
+6. PROJECT CONFIGURATION                             *forge-project-config*
+
+`.forge.json` is declarative and read automatically: >json
+  {
+    "language": "typescript",
+    "runtime": "bun",
+    "package_manager": "bun",
+    "commands": {
+      "build": ["bun", "run", "build"],
+      "test": ["bun", "test"],
+      "run": { "argv": ["bun", "run", "dev"], "cwd": "app" }
+    }
+  }
+<
+`.forge.lua` is executable Lua. Forge NEVER loads it silently: the first use in
+a session asks for approval. It is evaluated without `io`, `os`, `package`,
+`require`, or `vim`, but should still only be approved for trusted projects.
+Set `allow_lua_project_config = false` to disable it. >lua
+  return {
+    language = "typescript",
+    commands = { test = { "bun", "test" } },
+  }
+<
+Project configuration is not the registry. Unregistering a project removes
+metadata only and never touches project files or `.forge.*` files.
+
+==============================================================================
+7. COMMAND RESOLUTION                              *forge-command-resolution*
+
+Build, test, run, and clean resolve commands in this order:
+
+  1. Explicit argv passed through the API.
+  2. Project configuration (`.forge.json` or approved `.forge.lua`).
+  3. Registry commands recorded when the project was created or updated.
+  4. Template commands re-rendered with stored options.
+  5. Build-system heuristics.
+
+Heuristics inspect `CMakeLists.txt`, `Makefile`, `package.json` plus lockfiles,
+`pyproject.toml`, `requirements.txt`, `pom.xml`, `build.gradle`,
+`build.gradle.kts`, `Cargo.toml`, and `go.mod` (plus configured build systems).
+
+Commands are argv arrays and run with an explicit cwd. No shell is involved.
+Long-running commands use native terminal buffers and can be cancelled with
+`:ForgeCancel`. Project-provided commands are confirmed once per session; clean
+always asks. If a CMake project has no `build/` directory, the first Build
+configures with CMake and asks you to Build again to compile.
+
+==============================================================================
+8. EXTENDING FORGE                                       *forge-extending*
+
+Register a language before registering templates that use it. >lua
+  require("forge").register_language("rust", {
+    name = "Rust",
+    extensions = { "rs" },
+    runtimes = { "rustc", "cargo" },
+    build_systems = { "cargo" },
+    templates = { "rust-binary" },
+    markers = { "Cargo.toml" },
+  })
+
+  require("forge").register_template({
+    id = "rust-binary",
+    name = "Rust binary",
+    language = "rust",
+    files = {
+      ["src/main.rs"] = 'fn main() { println!("Hello {{project_name}}"); }\n',
+      [".gitignore"] = "/target/\n",
+    },
+    commands = {
+      build = { "cargo", "build" },
+      test = { "cargo", "test" },
+      run = { "cargo", "run" },
+    },
+  })
+<
+Languages never require core changes. Definitions accept `name`,
+`extensions`, `runtimes`, `toolchains`, `templates`, `build_systems`,
+`package_managers`, `default_commands`, `markers`, `comment`, and optional
+dependency checks.
+
+==============================================================================
+9. LUA API                                                     *forge-api*
+
+All functions are on `require("forge")`. Errors are usually returned as
+`nil, message` (sometimes with a third metadata table).
+
+                                                      *forge.create_project()*
+`create_project(opts)` — create a project, or return a plan when
+`opts.dry_run == true`.
+
+Keys: `name`, `language`, `template`, `parent_dir`, `runtime`,
+`build_system`, `package_manager`, `options`, `git`, `open`, `dry_run`.
+
+                                                    *forge.open_project()*
+`open_project(target)` — registry record, project id, name, or directory.
+Changes cwd and updates `last_opened`.
+
+                                                   *forge.detect_project()*
+`detect_project(path)` — detection result with `root`, `vcs_root`, `best`,
+`candidates`, `language`, `build_system`, `confidence`.
+
+                                                *forge.get_current_project()*
+`get_current_project()` — registered parent of the buffer/cwd, or a detected
+project record (`detected = true`).
+
+                                                     *forge.run_command()*
+`run_command(kind_or_argv, opts)` — run `"build"`, `"test"`, `"run"`,
+`"clean"`, or an argv array. Returns job id and command spec.
+
+`opts`: `project`, `cwd`, `split`, `confirm`, `label`, `argv`.
+
+                                                          *forge.projects()*
+`projects()` — all registry records.
+
+                                                           *forge.project()*
+`project(identifier)` — one record, or nil.
+
+                                                  *forge.register_project()*
+`register_project(record)` — validate and register metadata.
+
+                                                *forge.unregister_project()*
+`unregister_project(identifier)` — remove metadata; files are kept.
+
+                                                  *forge.recent_projects()*
+`recent_projects(limit)` — most recently opened records.
+
+                                                  *forge.search_projects()*
+`search_projects(query)` — search names, paths, languages, and templates.
+
+                                             *forge.register_language()*
+`register_language(id, definition)` — add or replace a language definition.
+
+                                             *forge.register_template()*
+`register_template(template)` — validate and register a new template. Use
+`require("forge.templates").override(template)` to replace one.
+
+                                                        *forge.languages()*
+`languages()` — registered language definitions.
+
+                                                        *forge.templates()*
+`templates(language)` — registered templates, optionally filtered.
+
+                                                     *forge.refresh_tools()*
+`refresh_tools()` — bypass runtime caches and detect all tools.
+
+                                                      *forge.install_tool()*
+`install_tool(tool)` — show the plan, confirm, then start it in a terminal.
+
+                                                   *forge.cancel_commands()*
+`cancel_commands()` — cancel all running Forge jobs.
+
+                                                    *forge.open_dashboard()*
+`open_dashboard()` — open the dashboard programmatically.
+
+                                                           *forge.events()*
+`events()` — in-process event bus. Events include `project_created`,
+`project_opened`, `job_started`, and `job_exited`.
+
+==============================================================================
+10. SECURITY                                              *forge-security*
+
+  - argv arrays only; no shell interpolation or string concatenation.
+  - project names, destinations, template paths, and commands are validated.
+  - template path traversal and absolute paths are rejected.
+  - project creation never overwrites existing files.
+  - unregistering and pruning never delete project files.
+  - `.forge.lua` requires per-session approval and runs with restricted globals.
+  - external templates run with restricted globals but are trusted local code.
+  - no automatic runtime or dependency installation.
+  - install commands are shown and confirmed; no automatic sudo, no AUR helpers.
+  - no language server is started for detection.
+  - no daemon, watcher, polling, or automatic indexing.
+
+==============================================================================
+11. HEALTH CHECK                                           *forge-health*
+
+`:checkhealth forge` reports Neovim version, registry readability and schema,
+missing project paths, projects directory, template and language counts,
+external template directory, `git`, package manager support, and common runtime
+availability. It does not execute version checks or start language servers.
+
+==============================================================================
+12. TESTING                                               *forge-testing*
+
+The suite is dependency-free and runs in a clean Neovim:
+
+  nvim --headless --clean -u NONE -l tests/run.lua
+
+Filter by name:
+
+  FORGE_TEST_FILTER=registry nvim --headless --clean -u NONE -l tests/run.lua
+
+Tests cover validation, traversal prevention, filesystem safety, registry
+recovery and migration, detection, runtime/version handling, template
+rendering, project creation, command resolution, process behavior, extension
+APIs, command registration, and health checks. Tests must not claim success
+without executing; see CONTRIBUTING.md for the optional real-toolchain smoke
+test.
+
+==============================================================================
+13. LIMITATIONS                                         *forge-limitations*
+
+  - Neovim 0.11+ required.
+  - Installation supports pacman and apt only, with explicit package mappings.
+  - Built-in templates are minimal starters; they do not install frameworks.
+  - The MVP ships 14 templates. Hono, Flask, Django, Spring Boot, and
+    Ninja-specific scaffolds are available through the extension API, not as
+    built-ins.
+  - Java Maven/Gradle templates require existing `mvn`/`gradle`.
+  - Runtime version extraction is heuristic.
+  - Detection is bounded to the directory, its parents, and common `src/`
+    source hints; it does not walk whole repositories.
+  - `.forge.lua` approval is per Neovim session.
+  - Linux is the supported target; Windows package management is not handled.
+  - Forge does not configure LSP clients, formatters, or debuggers.
+
+ vim:tw=78:ts=8:noet:ft=help:norl:
