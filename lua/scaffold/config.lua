@@ -39,7 +39,15 @@ M.defaults = {
   -- Runtime version cache lifetime in seconds. 0 disables caching.
   runtime_cache_ttl = 300,
 
-  -- Terminal split used by build/run/test commands.
+  -- How command output (build/test/run/install logs) is shown:
+  --   "float" - centered floating window, never replaces the buffer you edit
+  --   "split" - separate split below; `terminal_split` controls the command
+  command_window = "float",
+
+  -- Floating window geometry (fractions of the editor size) and border.
+  float = { width = 0.8, height = 0.5, border = "rounded" },
+
+  -- Split command used when command_window = "split".
   terminal_split = "botright 14split",
 
   -- Optional user keymaps, e.g. { dashboard = "<leader>fp" }.

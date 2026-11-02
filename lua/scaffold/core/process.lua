@@ -88,6 +88,103 @@ function M.capture(argv, opts)
   return result.code, result.stdout or "", result.stderr or ""
 end
 
+--- Close an output window if it is still around. Finished jobs also lose their
+--- buffer so repeated builds do not leave `scaffold://` buffers behind; a job
+--- that is still running keeps its (hidden) buffer so :ScaffoldCancel can reach
+--- it.
+---@param win integer?
+---@param buf integer?
+function M.close_window(win, buf)
+  if win and vim.api.nvim_win_is_valid(win) then
+    pcall(vim.api.nvim_win_close, win, true)
+  end
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+  if vim.bo[buf].buftype ~= "terminal" then
+    return
+  end
+  for _, job in pairs(M.jobs) do
+    if job.buf == buf then
+      return
+    end
+  end
+  vim.bo[buf].bufhidden = "wipe"
+  pcall(vim.api.nvim_buf_delete, buf, { force = true })
+end
+
+--- q / <Esc> close the output window (a running job keeps going, its buffer is
+--- hidden, so `:ScaffoldCancel` can still reach it).
+---@param buf integer
+---@param win integer
+function M.bind_close(buf, win)
+  local function close()
+    M.close_window(win, buf)
+  end
+  for _, lhs in ipairs({ "q", "<Esc>" }) do
+    pcall(vim.keymap.set, "n", lhs, close, { buffer = buf, nowait = true, desc = "Scaffold: close output window" })
+  end
+  -- in terminal mode only <Esc> is taken over, `q` must still reach the program
+  pcall(vim.keymap.set, "t", "<Esc>", close, { buffer = buf, nowait = true, desc = "Scaffold: close output window" })
+end
+
+--- Open the window that will show command output.
+--- `command_window = "float"` (default) uses a centered float; `"split"` opens
+--- a separate split (`terminal_split`). Either way a brand new scratch buffer is
+--- created and put into the new window, so the buffer you were editing is never
+--- replaced (this used to `:split` and `termopen` in the current buffer, which
+--- turned the open file into a terminal).
+---@param title string
+---@param opts? {mode?: string, split?: string}
+---@return integer buf
+---@return integer win
+---@return string mode
+function M.command_window(title, opts)
+  opts = opts or {}
+  local config = require("scaffold.config")
+  local mode = opts.mode or config.get("command_window") or "float"
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].swapfile = false
+
+  if mode ~= "split" then
+    local float = config.get("float") or {}
+    local width = math.max(20, math.min(vim.o.columns - 2, math.floor(vim.o.columns * (float.width or 0.8))))
+    local height = math.max(6, math.min(vim.o.lines - 2, math.floor(vim.o.lines * (float.height or 0.5))))
+    local win = vim.api.nvim_open_win(buf, true, {
+      relative = "editor",
+      width = width,
+      height = height,
+      row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1),
+      col = math.max(0, math.floor((vim.o.columns - width) / 2)),
+      style = "minimal",
+      border = float.border or "rounded",
+      title = " " .. tostring(title) .. " ",
+      title_pos = "center",
+    })
+    vim.wo[win].wrap = false
+    vim.wo[win].signcolumn = "no"
+    vim.wo[win].foldcolumn = "0"
+    return buf, win, "float"
+  end
+
+  local previous = vim.api.nvim_get_current_win()
+  local split = opts.split
+  if split == nil then
+    split = config.get("terminal_split")
+  end
+  if split and split ~= "" then
+    pcall(vim.cmd, split)
+  end
+  local win = vim.api.nvim_get_current_win()
+  if win == previous then
+    vim.cmd("botright split")
+    win = vim.api.nvim_get_current_win()
+  end
+  vim.api.nvim_win_set_buf(win, buf)
+  vim.wo[win].wrap = false
+  return buf, win, "split"
+end
+
 function M.terminal(argv, opts)
   opts = opts or {}
   local ok, err = validator.command(argv)
@@ -98,25 +195,12 @@ function M.terminal(argv, opts)
     return nil, "working directory does not exist: " .. tostring(opts.cwd)
   end
 
-  local previous_win = vim.api.nvim_get_current_win()
-  local split = opts.split
-  if split == nil then
-    split = require("scaffold.config").get("terminal_split")
-  end
-
-  if split and split ~= "" then
-    local opened = pcall(vim.cmd, split)
-    if not opened then
-      return nil, "could not open terminal split: " .. split
-    end
-  end
-
-  local buf = vim.api.nvim_get_current_buf()
+  local label = opts.label or "command"
+  local buffer, win, mode = M.command_window(label, opts)
+  local buf = buffer
   vim.bo[buf].bufhidden = "hide"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "scaffold-terminal"
-
-  local label = opts.label or "command"
   local job_id = vim.fn.termopen(argv, {
     cwd = opts.cwd,
     env = merged_env(opts.env),
@@ -130,20 +214,31 @@ function M.terminal(argv, opts)
             level
           )
         end
+        -- window already closed while it ran: do not leave the buffer behind
+        local displayed = false
+        for _, other in ipairs(vim.api.nvim_list_wins()) do
+          if vim.api.nvim_win_get_buf(other) == buf then
+            displayed = true
+            break
+          end
+        end
+        if not displayed and vim.api.nvim_buf_is_valid(buf) then
+          vim.bo[buf].bufhidden = "wipe"
+          pcall(vim.api.nvim_buf_delete, buf, { force = true })
+        end
       end)
     end,
   })
 
   if job_id <= 0 then
-    if split and split ~= "" then
-      pcall(vim.cmd, "close")
-      pcall(vim.api.nvim_set_current_win, previous_win)
-    end
+    M.close_window(win)
     return nil, "failed to start process: " .. utils.display_argv(argv)
   end
 
   local safe_label = label:gsub("[^%w_-]+", "-")
   pcall(vim.api.nvim_buf_set_name, buf, ("scaffold://%s/%d"):format(safe_label, job_id))
+
+  M.bind_close(buf, win)
 
   M.jobs[job_id] = {
     id = job_id,
@@ -177,18 +272,12 @@ local function append_lines(appends, lines)
   end)
 end
 
--- Create a split buffer used to display captured output.
+-- Create a window used to display captured output (never the buffer you are
+-- editing: it always gets a fresh scratch buffer).
 function M.open_output(title, opts)
   opts = opts or {}
-  local split = opts.split
-  if split == nil then
-    split = require("scaffold.config").get("terminal_split")
-  end
-  if split and split ~= "" then
-    pcall(vim.cmd, split)
-  end
-  local buf = vim.api.nvim_get_current_buf()
-  vim.bo[buf].bufhidden = "hide"
+  local buf, win = M.command_window(title or "Scaffold output", opts)
+  vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "scaffold-output"
   vim.bo[buf].modifiable = true
@@ -196,6 +285,7 @@ function M.open_output(title, opts)
     "Scaffold.nvim — " .. (title or "output"),
   })
   vim.bo[buf].modifiable = false
+  M.bind_close(buf, win)
   return buf
 end
 

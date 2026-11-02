@@ -361,6 +361,73 @@ function M.register()
     nargs = 0,
     desc = "Scaffold: list and cancel running commands",
   })
+
+  command("ScaffoldRepair", function(args)
+    if not require_scaffold() then
+      return
+    end
+    local fs = require("scaffold.core.filesystem")
+    local registry = require("scaffold.core.registry")
+    local repair = require("scaffold.core.repair")
+
+    local target = args.args ~= "" and args.args or nil
+    local dir
+    if target then
+      local record = find_project(target)
+      dir = record and record.path or fs.expand(target)
+    else
+      local record = registry.find_containing(vim.fn.getcwd())
+      dir = record and record.path or vim.fn.getcwd()
+    end
+
+    local result, err = repair.run(dir)
+    if not result then
+      notify_error(err)
+      return
+    end
+
+    local project = result.project
+    local label = ("%s project (%s%s)"):format(
+      project.language,
+      project.language == "c" and "C" or "C++",
+      project.standard
+    )
+
+    if #result.failed > 0 then
+      notify_error(("could not write %s"):format(table.concat(result.failed, ", ")))
+    end
+
+    if #result.created == 0 then
+      vim.notify(
+        ("Scaffold: %s at %s already has %s"):format(label, project.dir, table.concat(result.kept, ", ")),
+        vim.log.levels.INFO
+      )
+      return
+    end
+
+    local message = ("Scaffold: %s at %s\n  created: %s"):format(
+      label,
+      project.dir,
+      table.concat(result.created, ", ")
+    )
+    if #result.kept > 0 then
+      message = message .. "\n  kept (already present): " .. table.concat(result.kept, ", ")
+    end
+    vim.notify(message, vim.log.levels.INFO)
+  end, {
+    nargs = "?",
+    desc = "Scaffold: add compile_flags.txt/.clangd to an existing C/C++ project",
+    complete = function(arglead)
+      local names = project_names()
+      local matches = {}
+      for _, name in ipairs(names) do
+        if name:sub(1, #arglead) == arglead then
+          matches[#matches + 1] = name
+        end
+      end
+      return vim.list_extend(matches, vim.fn.getcompletion(arglead, "dir"))
+    end,
+  })
 end
 
 return M

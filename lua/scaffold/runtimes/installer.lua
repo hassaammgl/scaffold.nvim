@@ -28,6 +28,7 @@ local PACKAGES = {
     python3 = "python",
     pip = "python-pip",
     pipx = "python-pipx",
+    uv = "uv",
     ruff = "ruff",
     basedpyright = "basedpyright",
     pytest = "python-pytest",
@@ -37,6 +38,11 @@ local PACKAGES = {
     gradle = "gradle",
     jdtls = "jdtls",
     git = "git",
+    lua = "lua",
+    luajit = "luajit",
+    luarocks = "luarocks",
+    luacheck = "luacheck",
+    stylua = "stylua",
   },
   debian = {
     gcc = "gcc",
@@ -57,6 +63,7 @@ local PACKAGES = {
     python3 = "python3",
     pip = "python3-pip",
     pipx = "pipx",
+    uv = nil, -- Astral installer (uv installer script / pipx), not in Debian repos
     ruff = "ruff",
     basedpyright = nil, -- npm-installed (npm i -g basedpyright)
     pytest = "python3-pytest",
@@ -66,11 +73,17 @@ local PACKAGES = {
     gradle = "gradle",
     jdtls = "eclipse-jdtls",
     git = "git",
+    lua = "lua5.4",
+    luajit = "luajit",
+    luarocks = "luarocks",
+    luacheck = "luacheck",
+    busted = "lua-busted",
   },
 }
 
 local MANUAL_HINTS = {
   bun = "Install Bun from https://bun.sh (curl is not run by Scaffold).",
+  uv = "Install uv with: pacman -S uv (Arch) / pipx install uv / https://docs.astral.sh/uv/",
   basedpyright = "Install with: npm install -g basedpyright",
   jdtls = "Install from your distribution package or the nvim-jdtls project.",
 }

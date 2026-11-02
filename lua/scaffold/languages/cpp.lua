@@ -9,7 +9,7 @@ registry.register("cpp", {
   runtimes = { "g++", "clang++" },
   build_systems = { "cmake", "make", "ninja" },
   package_managers = {},
-  templates = { "cpp-cmake", "cpp-make" },
+  templates = { "cpp-cmake", "cpp-make", "cpp-qt", "cpp-raylib" },
   markers = { "CMakeLists.txt", "compile_commands.json", "Makefile" },
   comment = "//",
 })

@@ -12,6 +12,7 @@ local BUILTIN_MODULES = {
   "scaffold.toolchains.bun",
   "scaffold.toolchains.python",
   "scaffold.toolchains.java",
+  "scaffold.toolchains.lua",
 }
 
 M._profiles = {}

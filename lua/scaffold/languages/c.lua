@@ -9,7 +9,7 @@ registry.register("c", {
   runtimes = { "gcc", "clang" },
   build_systems = { "cmake", "make", "ninja" },
   package_managers = {},
-  templates = { "c-cmake", "c-make" },
+  templates = { "c-cmake", "c-make", "c-raylib" },
   markers = { "CMakeLists.txt", "compile_commands.json", "Makefile" },
   comment = "//",
 })

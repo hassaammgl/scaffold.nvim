@@ -9,7 +9,7 @@ registry.register("python", {
   runtimes = { "python3" },
   build_systems = { "pip", "pytest" },
   package_managers = { "pip", "venv" },
-  templates = { "python-cli", "python-fastapi" },
+  templates = { "python-cli", "python-fastapi", "python-uv" },
   markers = { "pyproject.toml", "requirements.txt", "setup.py", "setup.cfg" },
   comment = "#",
 })

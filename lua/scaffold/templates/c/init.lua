@@ -1,6 +1,7 @@
 -- C project templates.
 
 local editor = require("scaffold.templates.editor")
+local standards = require("scaffold.templates.standards")
 
 local function cmake_lists(ctx)
   local standard = ctx.standard or "17"
@@ -41,6 +42,7 @@ local c_cmake = {
   language = "c",
   version = 1,
   description = "A C console application built with CMake.",
+  validate_options = standards.check,
   build_systems = { "cmake" },
   runtime_options = { "gcc", "clang" },
   default_runtime = "gcc",
@@ -128,6 +130,7 @@ local c_make = {
   language = "c",
   version = 1,
   description = "A small C console application built with Make.",
+  validate_options = standards.check,
   build_systems = { "make" },
   runtime_options = { "gcc", "clang" },
   default_runtime = "gcc",

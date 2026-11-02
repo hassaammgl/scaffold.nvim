@@ -115,6 +115,13 @@ Other floating screens use `q` to close; some add `r` (refresh) or `i`
 :ScaffoldRemove [{project}]                                 *:ScaffoldRemove*
   Remove a project from the registry. Project files are NOT deleted.
 
+:ScaffoldRepair [{project|dir}]                             *:ScaffoldRepair*
+  Add the editor/toolchain hints (`compile_flags.txt`, `.clangd`) to an
+  existing C/C++ project that was created before they existed. The language and
+  standard are read from `CMakeLists.txt` (CMAKE_CXX_STANDARD / LANGUAGES) or
+  from the Makefile's `-std=` flag. Existing files are never overwritten.
+  Defaults to the current directory (or the registered project containing it).
+
 :ScaffoldCancel                                             *:ScaffoldCancel*
   List running Scaffold commands and cancel one.
 
@@ -156,8 +163,20 @@ All options are merged over the defaults. Calling setup more than once is safe.
       Version-check cache lifetime in seconds. `0` disables caching.
       Default: `300`.
 
+  `command_window` (string)
+      Where command output (build/test/run/install logs) is shown:
+        "float" - centered floating window (default). It uses a fresh scratch
+                  buffer, so the file you are editing is never replaced.
+        "split" - a separate split, controlled by `terminal_split`.
+      Close an output window with `q` or <Esc> (in terminal mode <Esc>).
+      Running jobs keep going; `:ScaffoldCancel` can still reach them.
+
+  `float` (table)
+      `width` and `height` as fractions of the editor, plus `border`.
+      Default: `{ width = 0.8, height = 0.5, border = "rounded" }`.
+
   `terminal_split` (string)
-      Split used by command terminal buffers.
+      Split used when `command_window = "split"`.
       Default: `"botright 14split"`.
 
   `keymaps` (table)
@@ -180,13 +199,18 @@ Example: >lua
 
 Templates are plain Lua tables. Built-in ids:
 
-  C             `c-cmake`, `c-make`
-  C++           `cpp-cmake`, `cpp-make`
+  C             `c-cmake`, `c-make`, `c-raylib`
+  C++           `cpp-cmake`, `cpp-make`, `cpp-qt`, `cpp-raylib`
   JavaScript    `js-vanilla`, `js-express`
   TypeScript    `ts-node`, `ts-bun`
   Bun           `bun-ts`
-  Python        `python-cli`, `python-fastapi`
+  Python        `python-cli`, `python-fastapi`, `python-uv`
   Java          `java-maven`, `java-gradle`, `java-plain`
+  Lua           `lua-cli`, `lua-nvim-plugin`
+
+`cpp-qt` asks for a UI toolkit: `widgets` (Qt Widgets) or `qml` (Qt Quick).
+`python-uv` asks for a project kind: `cli` or `fastapi`; it manages the
+virtualenv with `uv sync`.
 
 Template fields: `id`, `name`, `language`, optional `version`, `description`,
 `files`, `commands`, `install_commands`, `options`, `build_systems`,

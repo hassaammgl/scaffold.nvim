@@ -100,6 +100,7 @@ Other screens use `q` to close and may add `r` (refresh) or `i` (install plan).
 | `:ScaffoldInstall [tool]` | Build and confirm an install command for a tool. |
 | `:ScaffoldTemplates [language]` | Browse templates. |
 | `:ScaffoldRemove [project]` | Remove a project from the registry. **Files are kept.** |
+| `:ScaffoldRepair [project\|dir]` | Add the missing `compile_flags.txt`/`.clangd` to an existing C/C++ project (never overwrites). |
 | `:ScaffoldCancel` | List running Scaffold commands and cancel one. |
 
 Commands complete project names, directories, language ids, and tool names
@@ -123,7 +124,9 @@ require("scaffold").setup({
   open_after_create = true,              -- prompt default in the wizard
   allow_lua_project_config = true,       -- set false to disable .scaffold.lua
   runtime_cache_ttl = 300,               -- seconds; 0 disables version caching
-  terminal_split = "botright 14split",   -- terminal used for commands
+  command_window = "float",              -- "float" (default) or "split"
+  float = { width = 0.8, height = 0.5, border = "rounded" },
+  terminal_split = "botright 14split",   -- split used when command_window = "split"
   keymaps = {},                          -- no global maps unless populated
 })
 ```
@@ -160,15 +163,19 @@ Built-in templates are declarative and versioned.
 
 | Language | Template ids |
 | --- | --- |
-| C | `c-cmake`, `c-make` |
-| C++ | `cpp-cmake`, `cpp-make` |
+| C | `c-cmake`, `c-make`, `c-raylib` |
+| C++ | `cpp-cmake`, `cpp-make`, `cpp-qt`, `cpp-raylib` |
 | JavaScript | `js-vanilla`, `js-express` |
 | TypeScript | `ts-node`, `ts-bun` |
 | Bun | `bun-ts` |
-| Python | `python-cli`, `python-fastapi` |
+| Python | `python-cli`, `python-fastapi`, `python-uv` |
 | Java | `java-maven`, `java-gradle`, `java-plain` |
+| Lua | `lua-cli`, `lua-nvim-plugin` |
 
-C++ templates support C++17/20/23 and console or library layouts. JavaScript,
+C++ templates support C++17/20/23/26, console or library layouts, Qt 6
+(Widgets or Qt Quick/QML) and raylib. Lua templates cover a plain CLI script and
+a Neovim plugin skeleton (module, `plugin/` entry, help file, zero-dependency
+tests). JavaScript,
 TypeScript, and Bun templates support npm, pnpm, yarn, and Bun package
 managers where applicable. Python templates use a `src/` layout and do not
 create a virtual environment automatically. Java Maven/Gradle templates expect
@@ -459,7 +466,7 @@ SCAFFOLD_TEST_FILTER=registry nvim --headless --clean -u NONE -l tests/run.lua
 - Built-in templates are intentionally small starters. They do not install
   frameworks, pin lockfiles, or configure LSP. Java templates require an
   existing Maven or Gradle installation.
-- The MVP ships 14 templates. Hono, Flask, Django, Spring Boot, and
+- The MVP ships 20 templates. Hono, Flask, Django, Spring Boot, and
   Ninja-specific project scaffolds are not built in; they can be added through
   the language/template extension API (see `templates/README.md`) without
   patching Scaffold.

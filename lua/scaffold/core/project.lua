@@ -181,6 +181,16 @@ function M.plan(opts)
   local rendered = renderer.plan(template, ctx, destination)
   local errors = vim.deepcopy(rendered.errors or {})
 
+  -- Optional per-template validation, e.g. "C++26 needs GCC >= 15".
+  if type(template.validate_options) == "function" then
+    local ok, validation_err = pcall(template.validate_options, ctx)
+    if not ok then
+      errors[#errors + 1] = "option validation failed: " .. tostring(validation_err)
+    elseif validation_err then
+      errors[#errors + 1] = validation_err
+    end
+  end
+
   local commands = {}
   for _, kind in ipairs({ "build", "test", "run", "clean", "configure" }) do
     local definition = template.commands and template.commands[kind]

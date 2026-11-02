@@ -24,6 +24,12 @@ M.TOOLS = {
   ninja = { label = "Ninja", cmd = "ninja", args = { "--version" }, category = "c" },
   gdb = { label = "GDB", cmd = "gdb", args = { "--version" }, category = "c" },
 
+  lua = { label = "Lua", cmd = "lua", args = { "-v" }, category = "lua" },
+  luajit = { label = "LuaJIT", cmd = "luajit", args = { "-v" }, category = "lua" },
+  luarocks = { label = "LuaRocks", cmd = "luarocks", args = { "--version" }, category = "lua" },
+  busted = { label = "busted", cmd = "busted", args = { "--version" }, category = "lua" },
+  luacheck = { label = "luacheck", cmd = "luacheck", args = { "--version" }, category = "lua" },
+
   node = { label = "Node.js", cmd = "node", args = { "--version" }, category = "js" },
   npm = { label = "npm", cmd = "npm", args = { "--version" }, category = "js" },
   pnpm = { label = "pnpm", cmd = "pnpm", args = { "--version" }, category = "js" },
@@ -46,6 +52,7 @@ M.TOOLS = {
     category = "python",
   },
   pipx = { label = "pipx", cmd = "pipx", args = { "--version" }, category = "python" },
+  uv = { label = "uv", cmd = "uv", args = { "--version" }, category = "python" },
   ruff = { label = "Ruff", cmd = "ruff", args = { "--version" }, category = "python" },
   basedpyright = { label = "basedpyright", cmd = "basedpyright", args = { "--version" }, category = "python" },
   pytest = {

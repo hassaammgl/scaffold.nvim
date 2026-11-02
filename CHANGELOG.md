@@ -17,10 +17,30 @@ All notable changes to Scaffold.nvim are documented here. The format follows
     (`-xc++-header` for C++, `-xc-header` for C) instead of clangd's C++
     default for `.h`.
 - C++26 as a standard option in `cpp-cmake` and `cpp-make`.
+- New templates: `cpp-qt` (Qt 6 Widgets or Qt Quick/QML), `cpp-raylib`,
+  `c-raylib`, `python-uv` (`cli` or `fastapi`, virtualenv managed by uv),
+  `lua-cli`, and `lua-nvim-plugin`.
+- New `lua` language profile (Lua 5.1+/LuaJIT, luarocks, stylua/luacheck/busted).
+- Runtime/tool entries for `uv`, `lua`, `luajit`, `luarocks`, `luacheck`,
+  `busted`, with pacman/apt install mappings.
+- `:ScaffoldRepair [project|dir]`: backfills `compile_flags.txt` + `.clangd`
+  into existing C/C++ projects, reading the language/standard from
+  `CMakeLists.txt` or the Makefile. Never overwrites files.
+- Standard/compiler compatibility check before creating a project: C++26 needs
+  GCC >= 15 / Clang >= 21 / CMake >= 3.30 (C++23: 13 / 17 / 3.20, and so on).
+  The error names the detected version and what to upgrade.
+- `:checkhealth scaffold` reports the highest C and C++ standard the installed
+  toolchain can build.
 - `compile_commands.json` is ignored in the Makefile templates too.
 
 ### Fixed
 
+- Running a project command (`:ScaffoldBuild`/`Test`/`Run`, installs) no longer
+  turns the buffer you are editing into a terminal. `:split` + `termopen` used
+  the current buffer, which replaced the open file with a terminal buffer; each
+  run now gets its own scratch buffer and window. The window is a centered float
+  by default (`command_window = "float"`, `float = { ... }`), closeable with
+  `q` / `<Esc>`, and finished jobs no longer leave `scaffold://` buffers behind.
 - clangd produced bogus diagnostics on a freshly generated C/C++ project
   (`No template named 'expected'`, `No member named 'println'`, `file not found`
   for the project's own headers) because no compilation database or flags

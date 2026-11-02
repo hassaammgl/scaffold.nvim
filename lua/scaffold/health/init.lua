@@ -82,6 +82,31 @@ function M.check()
     report("warn", "Projects directory does not exist: " .. tostring(projects_dir))
   end
 
+  -- C/C++ standard support: what the templates can offer on this machine
+  local standards = require("scaffold.templates.standards")
+  local versions = standards.versions()
+  local function tool_version(info)
+    if info and info.found and info.version then
+      return info.version
+    end
+    return "missing"
+  end
+  local highest_cpp = standards.highest("cpp", "g++", "cmake")
+  local highest_c = standards.highest("c", "gcc", "cmake")
+  local toolchain = ("g++ %s, clang++ %s, cmake %s"):format(
+    tool_version(versions.gcc),
+    tool_version(versions.clang),
+    tool_version(versions.cmake)
+  )
+  if highest_cpp then
+    report("ok", ("C++ support: up to C++%s (%s)"):format(highest_cpp, toolchain))
+  else
+    report("warn", ("C++ support: no usable standard detected (%s)"):format(toolchain))
+  end
+  if highest_c then
+    report("ok", ("C support: up to C%s"):format(highest_c))
+  end
+
   -- Templates
   templates.load_builtins()
   local template_count = #templates.list()

@@ -18,6 +18,10 @@ local BUILTIN_MODULES = {
   "scaffold.templates.bun",
   "scaffold.templates.python",
   "scaffold.templates.java",
+  "scaffold.templates.cpp_qt",
+  "scaffold.templates.raylib",
+  "scaffold.templates.python_uv",
+  "scaffold.templates.lua",
 }
 
 local function is_string_map(value)

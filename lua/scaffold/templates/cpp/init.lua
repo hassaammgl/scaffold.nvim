@@ -1,6 +1,7 @@
 -- C++ project templates.
 
 local editor = require("scaffold.templates.editor")
+local standards = require("scaffold.templates.standards")
 
 local function cmake_lists(ctx)
   local standard = ctx.standard or "23"
@@ -73,6 +74,7 @@ local cpp_cmake = {
   language = "cpp",
   version = 1,
   description = "A C++ console application or library built with CMake.",
+  validate_options = standards.check,
   build_systems = { "cmake" },
   runtime_options = { "g++", "clang++" },
   default_runtime = "g++",
@@ -212,6 +214,7 @@ local cpp_make = {
   language = "cpp",
   version = 1,
   description = "A small C++ console application built with Make.",
+  validate_options = standards.check,
   build_systems = { "make" },
   runtime_options = { "g++", "clang++" },
   default_runtime = "g++",

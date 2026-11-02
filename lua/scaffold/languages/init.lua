@@ -13,6 +13,7 @@ local BUILTINS = {
   "scaffold.languages.bun",
   "scaffold.languages.python",
   "scaffold.languages.java",
+  "scaffold.languages.lua",
 }
 
 M._builtins_loaded = false
