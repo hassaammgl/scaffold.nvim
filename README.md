@@ -216,6 +216,36 @@ without an extra prompt.
 
 ---
 
+## Python / uv environments
+
+For Python projects Scaffold resolves an interpreter in this order:
+`$VIRTUAL_ENV`, `<project>/.venv`, `<project>/venv` (each only when `bin/python`
+exists), then `python3` or `python` on `PATH`. uv projects are recognized by
+`uv.lock` or a plain-text `[tool.uv]` section in `pyproject.toml`.
+
+Recorded and template commands whose first argument is exactly `python` or
+`python3` are rewritten to the virtualenv interpreter at resolve time. Explicit
+argv passed to `run_command()` and `.scaffold.*` commands are never rewritten.
+Python test heuristics use `uv run pytest` when uv is available, otherwise the
+virtualenv interpreter, otherwise `python3 -m pytest`.
+
+To point Pyright/basedpyright at the same interpreter, opt in with the LSP hook.
+Scaffold does not start or configure an LSP client itself:
+
+```lua
+vim.lsp.config("basedpyright", {
+  before_init = require("scaffold").python_lsp_before_init,
+})
+vim.lsp.enable("basedpyright")
+```
+
+`scaffold.python_env(path)` returns `{ root, venv, python, uv, uv_available }`
+and `scaffold.python_path(path)` returns only the interpreter. A language server
+keeps the interpreter it chose at startup, so run `:LspRestart` after `.venv`
+changes.
+
+---
+
 ## Project configuration
 
 `.scaffold.json` is declarative and is read automatically:
@@ -389,6 +419,9 @@ scaffold.setup(opts)                         -- merge configuration
 scaffold.create_project(opts)                -- create (or plan with dry_run)
 scaffold.open_project(target)                -- registry record, id, or path
 scaffold.detect_project(path)                -- detection result or nil, err
+scaffold.python_env(path)                    -- { root, venv, python, uv, uv_available }
+scaffold.python_path(path)                   -- resolved Python interpreter or nil
+scaffold.python_lsp_before_init(_, config)   -- opt-in LSP before_init hook
 scaffold.get_current_project()               -- registry record or detected project
 scaffold.run_command(kind_or_argv, opts)     -- build/test/run/clean or argv
 scaffold.projects()                          -- all registry records
@@ -478,7 +511,9 @@ SCAFFOLD_TEST_FILTER=registry nvim --headless --clean -u NONE -l tests/run.lua
   helpers are mostly portable, but package management and shell-free terminal
   behavior are tested on Linux only.
 - Scaffold does not manage LSP clients, formatters, or debuggers. It reports
-  whether their executables exist and leaves configuration to you.
+  whether their executables exist and leaves configuration to you. A language
+  server keeps the interpreter it chose at startup, so run `:LspRestart` after
+  the project `.venv` changes.
 
 ---
 

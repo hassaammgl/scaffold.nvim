@@ -291,6 +291,29 @@ Long-running commands use native terminal buffers and can be cancelled with
 always asks. If a CMake project has no `build/` directory, the first Build
 configures with CMake and asks you to Build again to compile.
 
+Python / uv environments                                 *scaffold-python-env*
+
+For Python projects Scaffold resolves an interpreter in this order:
+`$VIRTUAL_ENV`, `<project>/.venv`, `<project>/venv` (each only when `bin/python`
+exists), then `python3` or `python` on `PATH`. uv projects are recognized by
+`uv.lock` or a plain-text `[tool.uv]` section in `pyproject.toml`.
+
+Recorded and template commands whose first argument is exactly `python` or
+`python3` are rewritten to the virtualenv interpreter at resolve time. Explicit
+argv passed to `run_command()` and `.scaffold.*` commands are never rewritten.
+Python test heuristics use `uv run pytest` when uv is available, otherwise the
+virtualenv interpreter, otherwise `python3 -m pytest`.
+
+Use the optional LSP hook to point Pyright/basedpyright at the same interpreter.
+Scaffold does not start or configure an LSP client itself: >lua
+  vim.lsp.config("basedpyright", {
+    before_init = require("scaffold").python_lsp_before_init,
+  })
+  vim.lsp.enable("basedpyright")
+<
+`python_env(path)` returns `{ root, venv, python, uv, uv_available }`;
+`python_path(path)` returns only the interpreter.
+
 ==============================================================================
 8. EXTENDING SCAFFOLD                                       *scaffold-extending*
 
@@ -343,7 +366,20 @@ Changes cwd and updates `last_opened`.
 
                                                    *scaffold.detect_project()*
 `detect_project(path)` — detection result with `root`, `vcs_root`, `best`,
-`candidates`, `language`, `build_system`, `confidence`.
+`candidates`, `language`, `build_system`, `package_manager`, `confidence`.
+
+                                                     *scaffold.python_env()*
+`python_env(path)` — Python environment info for the project containing `path`:
+`{ root, venv, python, uv, uv_available }`. Read-only; nothing is created or
+executed.
+
+                                                    *scaffold.python_path()*
+`python_path(path)` — only the resolved Python interpreter path, or nil.
+
+                                          *scaffold.python_lsp_before_init()*
+`python_lsp_before_init(_, config)` — opt-in `before_init` hook for
+Pyright/basedpyright. It sets `config.settings.python.pythonPath` from the
+project virtualenv. Scaffold does not start or configure LSP clients.
 
                                                 *scaffold.get_current_project()*
 `get_current_project()` — registered parent of the buffer/cwd, or a detected
@@ -459,5 +495,7 @@ test.
   - `.scaffold.lua` approval is per Neovim session.
   - Linux is the supported target; Windows package management is not handled.
   - Scaffold does not configure LSP clients, formatters, or debuggers.
+  - A language server keeps the interpreter it chose at startup; run
+    `:LspRestart` after the project `.venv` changes.
 
  vim:tw=78:ts=8:noet:ft=help:norl:

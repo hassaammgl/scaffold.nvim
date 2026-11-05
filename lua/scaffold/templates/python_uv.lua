@@ -52,6 +52,10 @@ local function pyproject(ctx)
     'select = ["E", "F", "I", "UP", "B"]',
     extra,
     "",
+    "[tool.pyright]",
+    'venvPath = "."',
+    'venv = ".venv"',
+    "",
   }, "\n")
 end
 

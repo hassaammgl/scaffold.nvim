@@ -206,4 +206,29 @@ function M.events()
   return require("scaffold.core.events")
 end
 
+-- Python environment helpers ------------------------------------------------
+
+function M.python_env(path)
+  return require("scaffold.core.python_env").info(path)
+end
+
+function M.python_path(path)
+  local env = require("scaffold.core.python_env")
+  return env.python(env.find_root(path))
+end
+
+-- Opt-in LSP hook: use the project virtualenv for Pyright-like servers.
+-- Scaffold never starts or configures an LSP client on its own.
+function M.python_lsp_before_init(_, config)
+  local env = require("scaffold.core.python_env")
+  local root = config and config.root_dir or vim.uv.cwd()
+  local python = env.python(env.find_root(root))
+  if not python then
+    return
+  end
+  config.settings = config.settings or {}
+  config.settings.python = config.settings.python or {}
+  config.settings.python.pythonPath = python
+end
+
 return M

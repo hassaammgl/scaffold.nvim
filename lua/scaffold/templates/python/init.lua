@@ -19,6 +19,10 @@ local function pyproject_cli(ctx)
     "[tool.setuptools.packages.find]",
     'where = ["src"]',
     "",
+    "[tool.pyright]",
+    'venvPath = "."',
+    'venv = ".venv"',
+    "",
   }, "\n")
 end
 
@@ -160,6 +164,10 @@ local python_fastapi = {
       "",
       "[tool.setuptools]",
       'packages = ["app"]',
+      "",
+      "[tool.pyright]",
+      'venvPath = "."',
+      'venv = ".venv"',
       "",
     }, "\n"),
     ["app/__init__.py"] = "",

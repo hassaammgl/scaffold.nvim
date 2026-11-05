@@ -4,6 +4,7 @@
 -- the user confirms, and commands run asynchronously in an output buffer.
 
 local fs = require("scaffold.core.filesystem")
+local python_env = require("scaffold.core.python_env")
 local process = require("scaffold.core.process")
 local project_mod = require("scaffold.core.project")
 local build = require("scaffold.managers.build")
@@ -76,35 +77,63 @@ function M.plan(project, opts)
       notes[#notes + 1] = "node_modules already exists; installation will refresh it."
     end
   elseif fs.is_file(fs.join(path, "pyproject.toml")) or fs.is_file(fs.join(path, "requirements.txt")) then
-    local runtime = python_runtime(project)
-    local venv = fs.join(path, ".venv")
-    local venv_exists = fs.is_dir(venv)
-    if not venv_exists then
-      add({
-        id = "python-venv",
-        label = "Create virtual environment (.venv)",
-        argv = { runtime, "-m", "venv", ".venv" },
-        kind = "venv",
-        requires_tool = runtime,
-      })
-    end
-    local pip_argv
-    if fs.is_file(fs.join(path, "requirements.txt")) then
-      pip_argv = { ".venv/bin/pip", "install", "-r", "requirements.txt" }
-    elseif fs.is_file(fs.join(path, "pyproject.toml")) then
-      pip_argv = { ".venv/bin/pip", "install", "-e", "." }
-    end
-    if pip_argv then
-      add({
-        id = "python-install",
-        label = "Install Python project dependencies",
-        argv = pip_argv,
-        kind = "install",
-        requires_tool = "pip",
-      })
-    end
-    if not venv_exists then
-      notes[#notes + 1] = "A virtual environment will be created first; dependency installation uses it."
+    local uv_project = python_env.is_uv_project(path)
+      or (project and project.package_manager == "uv")
+
+    if uv_project then
+      if vim.fn.executable("uv") == 1 then
+        add({
+          id = "python-uv-sync",
+          label = "Sync Python environment with uv",
+          argv = { "uv", "sync" },
+          kind = "install",
+          requires_tool = "uv",
+        })
+      else
+        notes[#notes + 1] = "This is a uv project, but uv is not installed. Install uv, then run `uv sync`."
+      end
+    else
+      local runtime = python_runtime(project)
+      local venv = fs.join(path, ".venv")
+      local venv_exists = fs.is_dir(venv)
+      if not venv_exists then
+        add({
+          id = "python-venv",
+          label = "Create virtual environment (.venv)",
+          argv = { runtime, "-m", "venv", ".venv" },
+          kind = "venv",
+          requires_tool = runtime,
+        })
+      end
+
+      local pip_prefix
+      if venv_exists then
+        pip_prefix = { fs.join(venv, "bin", "python"), "-m", "pip" }
+      else
+        pip_prefix = { ".venv/bin/pip" }
+      end
+
+      local pip_args
+      if fs.is_file(fs.join(path, "requirements.txt")) then
+        pip_args = { "install", "-r", "requirements.txt" }
+      elseif fs.is_file(fs.join(path, "pyproject.toml")) then
+        pip_args = { "install", "-e", "." }
+      end
+
+      if pip_args then
+        local pip_argv = vim.deepcopy(pip_prefix)
+        vim.list_extend(pip_argv, pip_args)
+        add({
+          id = "python-install",
+          label = "Install Python project dependencies",
+          argv = pip_argv,
+          kind = "install",
+          requires_tool = "pip",
+        })
+      end
+      if not venv_exists then
+        notes[#notes + 1] = "A virtual environment will be created first; dependency installation uses it."
+      end
     end
   elseif fs.is_file(fs.join(path, "pom.xml")) then
     add({

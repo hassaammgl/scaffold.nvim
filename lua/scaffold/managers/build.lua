@@ -16,6 +16,7 @@ local process = require("scaffold.core.process")
 local registry = require("scaffold.core.registry")
 local project_mod = require("scaffold.core.project")
 local detector = require("scaffold.core.detector")
+local python_env = require("scaffold.core.python_env")
 local templates = require("scaffold.templates")
 local renderer = require("scaffold.templates.renderer")
 local utils = require("scaffold.utils")
@@ -101,6 +102,36 @@ local function recorded(project)
     return registry.get(project.id) or project
   end
   return project
+end
+
+local function python_test_command(path)
+  local info = python_env.info(path)
+  if info.uv and info.uv_available then
+    return { "uv", "run", "pytest" }
+  end
+  if info.venv then
+    return { info.venv.python, "-m", "pytest" }
+  end
+  return { "python3", "-m", "pytest" }
+end
+
+-- Registry/template commands recorded as `python3 ...` should use the project
+-- virtualenv when one exists. Explicit argv and project configuration are
+-- never rewritten.
+local function substitute_python(argv, project, path)
+  if not project or project.language ~= "python" then
+    return argv
+  end
+  if type(argv) ~= "table" or (argv[1] ~= "python" and argv[1] ~= "python3") then
+    return argv
+  end
+  local venv = python_env.find_venv(python_env.find_root(path))
+  if not venv then
+    return argv
+  end
+  local resolved = vim.deepcopy(argv)
+  resolved[1] = venv.python
+  return resolved
 end
 
 local function lockfile_manager(path)
@@ -200,6 +231,10 @@ function M.default_commands(build_system, kind, path, project)
       return { binary }
     end
     return nil
+  end
+
+  if kind == "test" and (build_system == "pip" or build_system == "pytest" or (project and project.language == "python")) then
+    return python_test_command(path)
   end
 
   local command = defaults[kind]
@@ -323,6 +358,7 @@ function M.resolve(project, kind, opts)
     if stored_cwd and not cwd then
       cwd = fs.join(path, stored_cwd)
     end
+    argv = substitute_python(argv, project, path)
     return {
       argv = argv,
       cwd = cwd or path,
@@ -339,6 +375,7 @@ function M.resolve(project, kind, opts)
       return nil, err
     end
     if argv then
+      argv = substitute_python(argv, project, path)
       return {
         argv = argv,
         cwd = cwd and fs.join(path, cwd) or path,

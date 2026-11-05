@@ -19,6 +19,7 @@ M.MARKERS = {
   { file = "bun.lock", candidates = { { language = "bun", build_system = "bun", confidence = 0.9 } } },
   { file = "bun.lockb", candidates = { { language = "bun", build_system = "bun", confidence = 0.9 } } },
   { file = "bunfig.toml", candidates = { { language = "bun", build_system = "bun", confidence = 0.8 } } },
+  { file = "uv.lock", candidates = { { language = "python", build_system = "pip", package_manager = "uv", confidence = 0.9 } } },
   { file = "pyproject.toml", candidates = { { language = "python", build_system = "pip", confidence = 0.9 } } },
   { file = "requirements.txt", candidates = { { language = "python", build_system = "pip", confidence = 0.8 } } },
   { file = "setup.py", candidates = { { language = "python", build_system = "pip", confidence = 0.8 } } },
@@ -55,6 +56,7 @@ local function add_candidate(candidates, candidate, root, marker)
     candidates[key] = {
       language = candidate.language,
       build_system = candidate.build_system,
+      package_manager = candidate.package_manager,
       confidence = candidate.confidence,
       marker = marker,
       root = root,
@@ -245,6 +247,7 @@ function M.detect(path, opts)
     candidates = all,
     language = all[1] and all[1].language or nil,
     build_system = all[1] and all[1].build_system or nil,
+    package_manager = all[1] and all[1].package_manager or nil,
     confidence = all[1] and all[1].confidence or 0,
   }
 end
