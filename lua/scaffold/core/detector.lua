@@ -6,6 +6,7 @@
 -- Makefile are ambiguous and monorepos can contain several project types.
 
 local fs = require("scaffold.core.filesystem")
+local languages = require("scaffold.languages")
 local utils = require("scaffold.utils")
 
 local M = {}
@@ -50,6 +51,12 @@ local EXTENSION_LANGUAGES = {
 }
 
 local function add_candidate(candidates, candidate, root, marker)
+  -- Detection may know markers for languages that are not registered (Rust,
+  -- Go). Only report languages the plugin can actually work with; a custom
+  -- language registration makes its markers active again.
+  if not candidate.language or not languages.exists(candidate.language) then
+    return
+  end
   local key = (candidate.language or "") .. "|" .. (candidate.build_system or "")
   local existing = candidates[key]
   if not existing or candidate.confidence > existing.confidence then
@@ -192,6 +199,7 @@ function M.detect(path, opts)
   if type(path) ~= "string" or path == "" then
     return nil, "path is required"
   end
+  languages.load_builtins()
   local expanded = fs.expand(path)
   if fs.is_file(expanded) then
     expanded = fs.dirname(expanded)

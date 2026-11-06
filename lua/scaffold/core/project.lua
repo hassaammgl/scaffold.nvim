@@ -199,9 +199,10 @@ function M.plan(opts)
       if err then
         errors[#errors + 1] = ("command '%s': %s"):format(kind, err)
       elseif argv then
-        commands[kind] = argv
         if cwd then
-          commands[kind .. "_cwd"] = cwd
+          commands[kind] = { argv = argv, cwd = cwd }
+        else
+          commands[kind] = argv
         end
       end
     end

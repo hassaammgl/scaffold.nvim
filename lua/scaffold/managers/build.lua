@@ -425,7 +425,8 @@ function M.confirm(spec, path, opts)
   opts = opts or {}
   local key = confirmation_key(spec, path)
   local always_confirm = spec.kind == "clean"
-  if spec.confirm and (always_confirm or not M._confirmed[key]) then
+  local ask_project = spec.confirm and config.get("confirm_before_project_commands") ~= false
+  if (always_confirm or ask_project) and (always_confirm or not M._confirmed[key]) then
     local select = require("scaffold.ui.select")
     local approved = select.confirm(
       ("Run project %s command?\n\n  %s\n\nWorking directory:\n  %s\n\nSource: %s"):format(

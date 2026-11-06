@@ -236,13 +236,21 @@ function M.install(tool, opts)
     return nil, plan.reason
   end
 
-  local select = require("scaffold.ui.select")
-  local prompt = ("Install %s?\n\n  %s\n\n%s")
-    :format(tool, utils.display_argv(plan.argv), plan.needs_sudo and "This requires sudo and will ask for your password in the terminal." or "")
+  local config = require("scaffold.config")
+  local confirm = opts.confirm
+  if confirm == nil then
+    confirm = config.get("confirm_before_install") ~= false
+  end
 
-  if not select.confirm(prompt, { default = false }) then
-    utils.notify("Installation cancelled.")
-    return nil, "cancelled"
+  if confirm then
+    local select = require("scaffold.ui.select")
+    local prompt = ("Install %s?\n\n  %s\n\n%s")
+      :format(tool, utils.display_argv(plan.argv), plan.needs_sudo and "This requires sudo and will ask for your password in the terminal." or "")
+
+    if not select.confirm(prompt, { default = false }) then
+      utils.notify("Installation cancelled.")
+      return nil, "cancelled"
+    end
   end
 
   local job_id, start_err = process.terminal(plan.argv, {

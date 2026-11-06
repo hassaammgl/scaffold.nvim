@@ -330,9 +330,21 @@ function M.project_info(project)
   local commands = project.commands or {}
   local any = false
   for _, kind in ipairs({ "configure", "build", "test", "run", "clean" }) do
-    if commands[kind] then
+    local value = commands[kind]
+    if value then
       any = true
-      lines[#lines + 1] = ("   %-10s %s"):format(kind, utils.display_argv(commands[kind]))
+      local argv = value
+      local cwd = nil
+      if type(value) == "table" and not utils.is_list(value) and value.argv then
+        argv = value.argv
+        cwd = value.cwd
+      end
+      cwd = cwd or commands[kind .. "_cwd"]
+      local line = ("   %-10s %s"):format(kind, utils.display_argv(argv))
+      if cwd then
+        line = line .. ("  (cwd: %s)"):format(cwd)
+      end
+      lines[#lines + 1] = line
     end
   end
   if not any then

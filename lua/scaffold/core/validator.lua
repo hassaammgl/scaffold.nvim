@@ -217,9 +217,17 @@ function M.project_config(config)
       if type(kind) ~= "string" then
         return nil, "command names must be strings"
       end
-      local ok, err = validate_command_value(value, "commands." .. kind)
-      if not ok then
-        return nil, err
+      -- Older registry records stored the working directory next to the
+      -- command as `<kind>_cwd`. Accept those records when they are updated.
+      if kind:match("_cwd$") then
+        if type(value) ~= "string" or value == "" then
+          return nil, ("commands.%s must be a non-empty string"):format(kind)
+        end
+      else
+        local ok, err = validate_command_value(value, "commands." .. kind)
+        if not ok then
+          return nil, err
+        end
       end
     end
   end

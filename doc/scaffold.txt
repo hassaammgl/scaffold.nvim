@@ -210,7 +210,8 @@ Templates are plain Lua tables. Built-in ids:
 
 `cpp-qt` asks for a UI toolkit: `widgets` (Qt Widgets) or `qml` (Qt Quick).
 `python-uv` asks for a project kind: `cli` or `fastapi`; it manages the
-virtualenv with `uv sync`.
+virtualenv with `uv sync` and generates a root `main.py` that imports the
+generated package.
 
 Template fields: `id`, `name`, `language`, optional `version`, `description`,
 `files`, `commands`, `install_commands`, `options`, `build_systems`,
@@ -311,6 +312,13 @@ Scaffold does not start or configure an LSP client itself: >lua
   })
   vim.lsp.enable("basedpyright")
 <
+Generated `python-uv` and `python-cli` projects use a `src/` layout, so their
+`[tool.pyright]` section also sets `extraPaths = ["src"]`. Existing projects
+can add the same line to `[tool.pyright]`, or rely on the hook below. The hook
+adds `<root>/src` to `python.analysis.extraPaths` and
+`basedpyright.analysis.extraPaths` (when that directory exists) next to
+`python.pythonPath`, so imports like `from pkg.custom import ...` resolve.
+basedpyright also honors `[tool.pyright]` in `pyproject.toml`.
 `python_env(path)` returns `{ root, venv, python, uv, uv_available }`;
 `python_path(path)` returns only the interpreter.
 
@@ -379,7 +387,9 @@ executed.
                                           *scaffold.python_lsp_before_init()*
 `python_lsp_before_init(_, config)` — opt-in `before_init` hook for
 Pyright/basedpyright. It sets `config.settings.python.pythonPath` from the
-project virtualenv. Scaffold does not start or configure LSP clients.
+project virtualenv and adds `<project>/src` to `python.analysis.extraPaths`
+and `basedpyright.analysis.extraPaths` when it exists. Scaffold does not start
+or configure LSP clients.
 
                                                 *scaffold.get_current_project()*
 `get_current_project()` — registered parent of the buffer/cwd, or a detected
@@ -435,8 +445,9 @@ project record (`detected = true`).
 `open_dashboard()` — open the dashboard programmatically.
 
                                                            *scaffold.events()*
-`events()` — in-process event bus. Events include `project_created`,
-`project_opened`, `job_started`, and `job_exited`.
+`events()` — in-process event bus. Events: `project_created`,
+`project_opened`, `project_registered`, `project_unregistered`,
+`project_updated`, `job_started`, and `job_exited`.
 
 ==============================================================================
 10. SECURITY                                              *scaffold-security*
@@ -491,7 +502,9 @@ test.
   - Java Maven/Gradle templates require existing `mvn`/`gradle`.
   - Runtime version extraction is heuristic.
   - Detection is bounded to the directory, its parents, and common `src/`
-    source hints; it does not walk whole repositories.
+    source hints; it does not walk whole repositories. Only registered
+    languages are reported; `Cargo.toml`/`go.mod` become active after
+    registering `rust`/`go` through the extension API.
   - `.scaffold.lua` approval is per Neovim session.
   - Linux is the supported target; Windows package management is not handled.
   - Scaffold does not configure LSP clients, formatters, or debuggers.

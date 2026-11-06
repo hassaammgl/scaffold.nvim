@@ -8,6 +8,7 @@
 
 local validator = require("scaffold.core.validator")
 local fs = require("scaffold.core.filesystem")
+local events = require("scaffold.core.events")
 local utils = require("scaffold.utils")
 
 local M = {}
@@ -214,6 +215,14 @@ function M.terminal(argv, opts)
             level
           )
         end
+        events.emit("job_exited", {
+          id = id,
+          code = code,
+          argv = vim.deepcopy(argv),
+          cwd = opts.cwd,
+          label = label,
+          type = "terminal",
+        })
         -- window already closed while it ran: do not leave the buffer behind
         local displayed = false
         for _, other in ipairs(vim.api.nvim_list_wins()) do
@@ -248,6 +257,14 @@ function M.terminal(argv, opts)
     label = label,
     started_at = os.time(),
   }
+
+  events.emit("job_started", {
+    id = job_id,
+    argv = vim.deepcopy(argv),
+    cwd = opts.cwd,
+    label = label,
+    type = "terminal",
+  })
 
   return job_id, buf
 end
@@ -352,6 +369,14 @@ function M.captured(argv, opts, on_exit)
           level
         )
       end
+      events.emit("job_exited", {
+        id = system and system.pid,
+        code = code,
+        argv = vim.deepcopy(argv),
+        cwd = opts.cwd,
+        label = opts.label or "task",
+        type = "system",
+      })
       if on_exit then
         local handler_ok, handler_err = pcall(on_exit, result)
         if not handler_ok then
@@ -375,6 +400,14 @@ function M.captured(argv, opts, on_exit)
     object = system,
     started_at = os.time(),
   }
+
+  events.emit("job_started", {
+    id = system.pid,
+    argv = vim.deepcopy(argv),
+    cwd = opts.cwd,
+    label = opts.label or "task",
+    type = "system",
+  })
 
   return system.pid, buf
 end

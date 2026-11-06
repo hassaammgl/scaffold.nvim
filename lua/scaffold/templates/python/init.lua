@@ -22,6 +22,7 @@ local function pyproject_cli(ctx)
     "[tool.pyright]",
     'venvPath = "."',
     'venv = ".venv"',
+    'extraPaths = ["src"]',
     "",
   }, "\n")
 end

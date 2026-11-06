@@ -178,7 +178,9 @@ a Neovim plugin skeleton (module, `plugin/` entry, help file, zero-dependency
 tests). JavaScript,
 TypeScript, and Bun templates support npm, pnpm, yarn, and Bun package
 managers where applicable. Python templates use a `src/` layout and do not
-create a virtual environment automatically. Java Maven/Gradle templates expect
+create a virtual environment automatically; `python-uv` adds a root `main.py`
+that imports the generated package and uses `uv sync` for the environment.
+Java Maven/Gradle templates expect
 `mvn`/`gradle`; `java-plain` needs `javac` and `java`.
 
 Runtime detection recognizes: `gcc`, `g++`, `clang`, `clang++`, `clangd`,
@@ -238,6 +240,14 @@ vim.lsp.config("basedpyright", {
 })
 vim.lsp.enable("basedpyright")
 ```
+
+Generated `python-uv` and `python-cli` projects use a `src/` layout, so their
+`[tool.pyright]` section also sets `extraPaths = ["src"]`. Existing projects
+can add the same line to `[tool.pyright]`, or rely on the hook. The hook adds
+`<project>/src` to `python.analysis.extraPaths` and
+`basedpyright.analysis.extraPaths` when it exists, so imports such as
+`from pkg.custom import ...` resolve. basedpyright also honors `[tool.pyright]`
+in `pyproject.toml`.
 
 `scaffold.python_env(path)` returns `{ root, venv, python, uv, uv_available }`
 and `scaffold.python_path(path)` returns only the interpreter. A language server
@@ -445,7 +455,8 @@ scaffold.events()                            -- in-process event bus
 `runtime`, `build_system`, `package_manager`, `options`, `git`, `open`, and
 `dry_run`. With `dry_run = true` it returns the plan without writing anything.
 
-Events: `project_created`, `project_opened`, `job_started`, `job_exited` (see
+Events: `project_created`, `project_opened`, `project_registered`,
+`project_unregistered`, `project_updated`, `job_started`, `job_exited` (see
 `lua/scaffold/core/events.lua` for the exact payloads).
 
 Errors are returned as `nil, message`, often with a third metadata table. Scaffold
@@ -505,7 +516,9 @@ SCAFFOLD_TEST_FILTER=registry nvim --headless --clean -u NONE -l tests/run.lua
   patching Scaffold.
 - Runtime version parsing is heuristic (`X.Y.Z`, then `X.Y`, then `X`).
 - Detection is marker-based and bounded; it inspects a directory and its
-  parents (plus `src/` for C/C++ source hints), not an entire repository.
+  parents (plus `src/` for C/C++ source hints), not an entire repository. Only
+  registered languages are reported: `Cargo.toml`/`go.mod` markers become
+  active after registering `rust`/`go` through the extension API.
 - `.scaffold.lua` approval is per Neovim session, keyed by file path.
 - Windows paths are not a supported configuration target. Core filesystem
   helpers are mostly portable, but package management and shell-free terminal

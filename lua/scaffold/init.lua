@@ -217,18 +217,56 @@ function M.python_path(path)
   return env.python(env.find_root(path))
 end
 
+-- Add an import root to a settings namespace (python or basedpyright) without
+-- duplicating an entry the user already configured.
+local function add_extra_path(settings, namespace, path)
+  local ns = settings[namespace]
+  if type(ns) ~= "table" then
+    ns = {}
+    settings[namespace] = ns
+  end
+  local analysis = ns.analysis
+  if type(analysis) ~= "table" then
+    analysis = {}
+    ns.analysis = analysis
+  end
+  local extra = analysis.extraPaths
+  if type(extra) ~= "table" then
+    extra = {}
+    analysis.extraPaths = extra
+  end
+  for _, value in ipairs(extra) do
+    if value == path then
+      return
+    end
+  end
+  extra[#extra + 1] = path
+end
+
 -- Opt-in LSP hook: use the project virtualenv for Pyright-like servers.
 -- Scaffold never starts or configures an LSP client on its own.
 function M.python_lsp_before_init(_, config)
   local env = require("scaffold.core.python_env")
   local root = config and config.root_dir or vim.uv.cwd()
-  local python = env.python(env.find_root(root))
-  if not python then
-    return
-  end
+  local project_root = env.find_root(root)
   config.settings = config.settings or {}
-  config.settings.python = config.settings.python or {}
-  config.settings.python.pythonPath = python
+
+  local python = env.python(project_root)
+  if python then
+    if type(config.settings.python) ~= "table" then
+      config.settings.python = {}
+    end
+    config.settings.python.pythonPath = python
+  end
+
+  -- src-layout projects keep importable packages under <root>/src. Add it as
+  -- an import root so `src/pkg/module.py` resolves from other files too.
+  local src = vim.fs.joinpath(project_root, "src")
+  local stat = vim.uv.fs_stat(src)
+  if stat and stat.type == "directory" then
+    add_extra_path(config.settings, "python", src)
+    add_extra_path(config.settings, "basedpyright", src)
+  end
 end
 
 return M

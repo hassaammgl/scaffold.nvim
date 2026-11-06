@@ -3,6 +3,7 @@
 -- Scaffold never installs dependencies automatically. Every command is shown,
 -- the user confirms, and commands run asynchronously in an output buffer.
 
+local config = require("scaffold.config")
 local fs = require("scaffold.core.filesystem")
 local python_env = require("scaffold.core.python_env")
 local process = require("scaffold.core.process")
@@ -297,24 +298,31 @@ function M.install(project, opts)
     return nil, "no operations selected"
   end
 
-  local select = require("scaffold.ui.select")
-  local lines = {
-    ("Install dependencies for %s?"):format(plan.project.name or fs.basename(plan.path)),
-    "",
-    "Working directory:",
-    "  " .. plan.path,
-    "",
-    "Commands:",
-  }
-  for _, operation in ipairs(operations) do
-    lines[#lines + 1] = "  " .. utils.display_argv(operation.argv)
+  local confirm = opts.confirm
+  if confirm == nil then
+    confirm = config.get("confirm_before_install") ~= false
   end
-  lines[#lines + 1] = ""
-  lines[#lines + 1] = "Nothing runs until you confirm. Some commands may download from the network."
 
-  if not select.confirm(table.concat(lines, "\n"), { default = false }) then
-    utils.notify("Scaffold: dependency installation cancelled.")
-    return nil, "cancelled"
+  if confirm then
+    local select = require("scaffold.ui.select")
+    local lines = {
+      ("Install dependencies for %s?"):format(plan.project.name or fs.basename(plan.path)),
+      "",
+      "Working directory:",
+      "  " .. plan.path,
+      "",
+      "Commands:",
+    }
+    for _, operation in ipairs(operations) do
+      lines[#lines + 1] = "  " .. utils.display_argv(operation.argv)
+    end
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = "Nothing runs until you confirm. Some commands may download from the network."
+
+    if not select.confirm(table.concat(lines, "\n"), { default = false }) then
+      utils.notify("Scaffold: dependency installation cancelled.")
+      return nil, "cancelled"
+    end
   end
 
   local buf = process.open_output("Dependencies — " .. (plan.project.name or fs.basename(plan.path)))

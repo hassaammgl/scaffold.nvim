@@ -55,6 +55,7 @@ local function pyproject(ctx)
     "[tool.pyright]",
     'venvPath = "."',
     'venv = ".venv"',
+    'extraPaths = ["src"]',
     "",
   }, "\n")
 end
@@ -129,6 +130,29 @@ local function app_test(ctx)
   }, "\n")
 end
 
+local function root_main(ctx)
+  if ctx.kind == "fastapi" then
+    return table.concat({
+      "import uvicorn",
+      "",
+      ("from %s.app import app"):format(ctx.project_module),
+      "",
+      "",
+      'if __name__ == "__main__":',
+      '    uvicorn.run(app, host="127.0.0.1", port=8000)',
+      "",
+    }, "\n")
+  end
+  return table.concat({
+    ("from %s.cli import main"):format(ctx.project_module),
+    "",
+    "",
+    'if __name__ == "__main__":',
+    "    raise SystemExit(main())",
+    "",
+  }, "\n")
+end
+
 local function readme(ctx)
   if ctx.kind == "fastapi" then
     return table.concat({
@@ -138,7 +162,7 @@ local function readme(ctx)
       "",
       "```sh",
       "uv sync                 # creates .venv and installs dependencies + dev tools",
-      "uv run python -m {{project_module}}   # http://127.0.0.1:8000/docs",
+      "uv run python main.py   # http://127.0.0.1:8000/docs",
       "uv run pytest -q",
       "uv run ruff check .",
       "```",
@@ -158,7 +182,7 @@ local function readme(ctx)
     "",
     "```sh",
     "uv sync                 # creates .venv and installs dependencies + dev tools",
-    "uv run {{project_slug}} hello",
+    "uv run python main.py hello",
     "uv run pytest -q",
     "uv run ruff check .",
     "```",
@@ -210,6 +234,7 @@ return {
       },
       files = {
         ["pyproject.toml"] = pyproject,
+        ["main.py"] = root_main,
         ["src/{{project_module}}/__init__.py"] = '__version__ = "0.1.0"\n',
         ["src/{{project_module}}/cli.py"] = function(ctx)
           if ctx.kind ~= "cli" then
@@ -259,9 +284,7 @@ return {
       commands = {
         build = { "uv", "sync" },
         test = { "uv", "run", "pytest", "-q" },
-        run = function(ctx)
-          return { "uv", "run", "python", "-m", ctx.project_module }
-        end,
+        run = { "uv", "run", "python", "main.py" },
       },
       install_commands = {
         { label = "Create the virtualenv and install dependencies (uv sync)", argv = { "uv", "sync" } },
