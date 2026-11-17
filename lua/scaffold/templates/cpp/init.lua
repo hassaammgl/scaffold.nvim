@@ -187,14 +187,23 @@ local function makefile(ctx)
     "CXX ?= g++",
     ("CXXFLAGS ?= -std=c++%s -Wall -Wextra -O2"):format(ctx.standard or "23"),
     "",
+    "CPPFLAGS += -Iinclude",
+    "",
     "TARGET := {{project_slug}}",
+    "SRCS := $(wildcard src/*.cpp)",
+    "OBJS := $(SRCS:src/%.cpp=build/%.o)",
+    "DEPS := $(OBJS:.o=.d)",
     "",
     ".PHONY: all run test clean",
     "",
     "all: $(TARGET)",
     "",
-    "$(TARGET): src/main.cpp",
-    "\t$(CXX) $(CXXFLAGS) -o $@ $<",
+    "$(TARGET): $(OBJS)",
+    "\t$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)",
+    "",
+    "build/%.o: src/%.cpp",
+    "\t@mkdir -p $(dir $@)",
+    "\t$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@",
     "",
     "run: $(TARGET)",
     "\t./$(TARGET)",
@@ -203,7 +212,9 @@ local function makefile(ctx)
     "\t./$(TARGET)",
     "",
     "clean:",
-    "\trm -f $(TARGET)",
+    "\trm -rf build $(TARGET)",
+    "",
+    "-include $(DEPS)",
     "",
   }, "\n")
 end
@@ -231,9 +242,9 @@ local cpp_make = {
   files = {
     ["Makefile"] = makefile,
     ["src/main.cpp"] = main_cpp,
-    [".gitignore"] = "{{project_slug}}\n*.o\ncompile_commands.json\n",
+    [".gitignore"] = "/build/\n{{project_slug}}\n*.o\n*.d\ncompile_commands.json\n",
     ["compile_flags.txt"] = function(ctx)
-      return editor.compile_flags("c++" .. (ctx.standard or "23"))
+      return editor.compile_flags("c++" .. (ctx.standard or "23"), { "include" })
     end,
     [".clangd"] = function(ctx)
       return editor.clangd("c++" .. (ctx.standard or "23"))
